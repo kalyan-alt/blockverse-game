@@ -390,6 +390,7 @@ const CATALOG=[
   {id:'bucket',  cat:'head', name:'Bucket Hat',     emoji:'🪣', price:70,  tags:'summer fishing'},
   {id:'antenna', cat:'head', name:'Robot Antenna',  emoji:'🤖', price:150, tags:'robot tech'},
   {id:'cathat',  cat:'head', name:'Cat Ears',       emoji:'🐱', price:130, tags:'cat ears cute animal'},
+  {id:'headless',cat:'head', name:'Headless Horseman', emoji:'🎃', price:10000, tags:'halloween headless horseman pumpkin spooky rare limited', season:'halloween'},
   // bodies
   {id:'shirt',   cat:'body', name:'Plain Shirt',    emoji:'👕', price:0,   tags:'default plain'},
   {id:'stripe',  cat:'body', name:'Striped Shirt',  emoji:'🦓', price:60,  tags:'stripes lines'},
@@ -414,7 +415,7 @@ const CATALOG=[
   {id:'rocket',  cat:'legs', name:'Rocket Boots',   emoji:'🚀', price:300, tags:'rocket fire boots'},
 ];
 const acct = { name:'Player'+Math.floor(100+Math.random()*900), bits:40, coins:0, wins:0, deaths:0,
-  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'} };
+  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'}, gear:new Set(['blaster','sidearm','bat','bomb']) };
 
 const GAMES = [
   {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
@@ -454,9 +455,9 @@ async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?tok
 document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
 document.getElementById('modRefresh').onclick=refreshMod;
 document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
-function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
+function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
-function profileOut(){ return {settings:SET,bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
+function profileOut(){ return {settings:SET,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
 function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
 function saveProfile(){ if(!authToken||!dirty) return; dirty=false; fetch(SERVER_HTTP+'/profile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,profile:profileOut()})}).catch(()=>{ dirty=true; }); }
 setInterval(()=>{ if(dirty) saveProfile(); },10000); addEventListener('beforeunload',saveProfile); document.addEventListener('visibilitychange',()=>{ if(document.hidden) saveProfile(); });
@@ -509,11 +510,13 @@ function renderSwatches(){ for(const [id,key] of [['swShirt','shirt'],['swPants'
   COLORS.forEach((c,i)=>{ const s=document.createElement('button'); s.className='sw'+(acct[key]===i?' on':'')+(acct.owned.has(i)?'':' locked'); s.style.background=hex(c.c); s.title=c.n;
     s.onclick=()=>{ if(!acct.owned.has(i)){ document.querySelector('[data-s=shop]').click(); return;} acct[key]=i; renderSwatches(); drawPreview(); drawMini(); }; el.appendChild(s); }); } }
 let catFilter='all';
+function seasonActive(season){ const d=new Date(), m=d.getMonth()+1, day=d.getDate(); if(season==='halloween') return (m===10&&day>=15)||(m===11&&day<=2); return true; }
+function seasonLabel(season){ if(season==='halloween') return '🎃 Halloween only · Oct 15 – Nov 2'; return ''; }
 function renderCatalog(){ const q=(document.getElementById('catSearch').value||'').toLowerCase().trim(); const grid=document.getElementById('catGrid'); grid.innerHTML='';
-  const list=CATALOG.filter(c=>(catFilter==='all'||c.cat===catFilter)&&(!q||c.name.toLowerCase().includes(q)||c.tags.includes(q)||c.cat.includes(q)));
+  const list=CATALOG.filter(c=>(!c.season||seasonActive(c.season)||acct.items.has(c.id))&&(catFilter==='all'||c.cat===catFilter)&&(!q||c.name.toLowerCase().includes(q)||c.tags.includes(q)||c.cat.includes(q)));
   if(!list.length){ grid.innerHTML='<div class="hint">Nothing matches that search.</div>'; return; }
   for(const c of list){ const owned=acct.items.has(c.id), worn=acct.wear[c.cat]===c.id; const b=document.createElement('button'); b.className='item'+(worn?' worn':'')+(owned?'':' locked');
-    b.innerHTML=`<div class="ic">${c.emoji}</div><div class="nm">${c.name}</div><div class="pr">${worn?'Equipped':owned?'Owned · tap to wear':(c.price+' BB'+(acct.bits<c.price?' · need '+(c.price-acct.bits)+' more':''))}</div><small style="color:var(--muted);font-size:10px">${c.cat==='head'?'Head':c.cat==='body'?'Body':'Legs'}</small>`;
+    b.innerHTML=`<div class="ic">${c.emoji}</div><div class="nm">${c.name}</div><div class="pr">${worn?'Equipped':owned?'Owned · tap to wear':(c.price.toLocaleString()+' BB'+(acct.bits<c.price?' · need '+(c.price-acct.bits).toLocaleString()+' more':''))}</div><small style="color:${c.season?'#b06a00':'var(--muted)'};font-size:10px;font-weight:${c.season?800:600}">${c.season?seasonLabel(c.season):(c.cat==='head'?'Head':c.cat==='body'?'Body':'Legs')}</small>`; if(c.season) b.style.borderColor='#ff8c42';
     b.onclick=()=>{ if(!owned){ if(acct.bits<c.price){ toast('Not enough Blockbux',`${c.price-acct.bits} more needed`); return; } acct.bits-=c.price; acct.items.add(c.id); fmtBits(); toast(`${c.emoji} Bought ${c.name}!`,'tap it again to wear'); renderCatalog(); return; }
       acct.wear[c.cat]=c.id; renderCatalog(); drawPreview(); drawMini(); }; grid.appendChild(b); } }
 document.getElementById('catSearch').addEventListener('input',renderCatalog);
@@ -532,10 +535,11 @@ function mat(c){ return new THREE.MeshLambertMaterial({color:c}); }
 function buildAvatar(){ const g=new THREE.Group(); const skin=0xf1c9a5, shirt=COLORS[acct.shirt].c, pants=COLORS[acct.pants].c, hat=COLORS[acct.hat].c;
   const part=(w,h,d,c,x,y,z)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c)); m.position.set(x,y,z); m.castShadow=true; g.add(m); return m; };
   const W=acct.wear||{head:'cap',body:'shirt',legs:'pants'}; const ink=0x1d2433, gold=0xffd23f, metal=0xb7c0d1, dark=0x2b2f3d;
-  part(1.2,1.2,1.2,skin,0,2.6,0);
+  const headless=W.head==='headless'; if(!headless) part(1.2,1.2,1.2,skin,0,2.6,0);
   // ---- head items ----
   switch(W.head){
     case 'none': break;
+    case 'headless': { part(.9,.9,.9,0xff8c42,-1.25,.75,-.55); part(.2,.3,.2,0x2f5d38,-1.25,1.35,-.55); const eyes=new THREE.MeshBasicMaterial({color:0xffd23f}); for(const x of [-1.45,-1.05]){ const e=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.06),eyes); e.position.set(x,.85,-1.0); g.add(e); } const mouth=new THREE.Mesh(new THREE.BoxGeometry(.5,.12,.06),eyes); mouth.position.set(-1.25,.55,-1.0); g.add(mouth); part(1.3,.15,1.0,0x1d2433,0,3.25,0); } break;
     case 'tophat': part(1.3,.15,1.3,ink,0,3.25,0); part(.9,1,.9,ink,0,3.8,0); part(.95,.15,.95,0xff4b3a,0,3.4,0); break;
     case 'crown': part(1.3,.35,1.3,gold,0,3.35,0); for(const x of [-.45,0,.45]) part(.25,.35,.25,gold,x,3.7,-.55); for(const x of [-.45,0,.45]) part(.25,.35,.25,gold,x,3.7,.55); part(.2,.2,.2,0xff4b3a,0,3.55,-.66); break;
     case 'horns': part(.25,.6,.25,0xff4b3a,-.5,3.5,0); part(.25,.6,.25,0xff4b3a,.5,3.5,0); part(.2,.3,.2,0xff4b3a,-.5,3.9,-.1); part(.2,.3,.2,0xff4b3a,.5,3.9,-.1); break;
@@ -579,7 +583,7 @@ function buildAvatar(){ const g=new THREE.Group(); const skin=0xf1c9a5, shirt=CO
     case 'ninjal': part(.72,.3,.72,0xff4b3a,-.4,-.9,0); part(.72,.3,.72,0xff4b3a,.4,-.9,0); break;
     case 'rocket': part(.8,.6,.9,metal,-.4,-.85,0); part(.8,.6,.9,metal,.4,-.85,0); part(.35,.4,.35,0xff8c42,-.4,-1.3,.2); part(.35,.4,.35,0xff8c42,.4,-1.3,.2); break;
   }
-  part(.2,.25,.05,0x1d2433,-.3,2.75,-.62); part(.2,.25,.05,0x1d2433,.3,2.75,-.62); part(.5,.1,.05,0x1d2433,0,2.35,-.62); return g; }
+  if(!headless){ part(.2,.25,.05,0x1d2433,-.3,2.75,-.62); part(.2,.25,.05,0x1d2433,.3,2.75,-.62); part(.5,.1,.05,0x1d2433,0,2.35,-.62); } return g; }
 
 // avatar preview (separate small renderer)
 const prevCanvas=document.getElementById('prev'); const prevR=new THREE.WebGLRenderer({canvas:prevCanvas,antialias:true}); prevR.setClearColor(0x8fd3ff);
@@ -764,26 +768,26 @@ function pickMode(g){
 }
 const GEAR={
   primary:[
-    {id:'blaster', name:'Blaster', emoji:'🔫', desc:'All-rounder · 50 dmg', kind:'gun', cd:.28, dmg:50, pellets:1, spread:0, range:80},
-    {id:'rapid',   name:'Rapid',   emoji:'⚡', desc:'Fast · 25 dmg', kind:'gun', cd:.11, dmg:25, pellets:1, spread:.025, range:60},
-    {id:'scatter', name:'Scatter', emoji:'💥', desc:'5 darts × 40 dmg, close range', kind:'gun', cd:.7, dmg:40, pellets:5, spread:.09, range:22},
-    {id:'sniper',  name:'Sniper',  emoji:'🎯', desc:'150 dmg one-shot · scope', kind:'gun', cd:1.1, dmg:150, pellets:1, spread:0, range:150, scope:true},
+    {id:'blaster', name:'Assault Blaster', emoji:'🔫', desc:'All-rounder · 50 dmg', kind:'gun', cd:.28, dmg:50, pellets:1, spread:0, range:80, price:0},
+    {id:'rapid',   name:'Rapid Blaster', emoji:'⚡', desc:'Fast · 25 dmg', kind:'gun', cd:.11, dmg:25, pellets:1, spread:.025, range:60, price:300},
+    {id:'scatter', name:'Scatter Gun', emoji:'💥', desc:'5 darts × 40 dmg, close range', kind:'gun', cd:.7, dmg:40, pellets:5, spread:.09, range:22, price:400},
+    {id:'sniper',  name:'Sniper Blaster', emoji:'🎯', desc:'150 dmg one-shot · scope', kind:'gun', cd:1.1, dmg:150, pellets:1, spread:0, range:150, scope:true, price:600},
   ],
   secondary:[
-    {id:'sidearm', name:'Sidearm', emoji:'🔦', desc:'Quick backup · 35 dmg', kind:'gun', cd:.3, dmg:35, pellets:1, spread:.01, range:45},
-    {id:'burst',   name:'Burst',   emoji:'🎆', desc:'3 darts × 30 dmg', kind:'gun', cd:.6, dmg:30, pellets:3, spread:.03, range:40},
-    {id:'popper',  name:'Popper',  emoji:'🫧', desc:'Slow · 100 dmg', kind:'gun', cd:.9, dmg:100, pellets:1, spread:0, range:30},
+    {id:'sidearm', name:'Handgun', emoji:'🔦', desc:'Quick backup · 35 dmg', kind:'gun', cd:.3, dmg:35, pellets:1, spread:.01, range:45, price:0},
+    {id:'burst',   name:'Burst Pistol', emoji:'🎆', desc:'3 darts × 30 dmg', kind:'gun', cd:.6, dmg:30, pellets:3, spread:.03, range:40, price:250},
+    {id:'popper',  name:'Popper', emoji:'🫧', desc:'Slow · 100 dmg', kind:'gun', cd:.9, dmg:100, pellets:1, spread:0, range:30, price:350},
   ],
   melee:[
-    {id:'bat',    name:'Foam Bat',    emoji:'🏏', desc:'Fast swing · 100 dmg', kind:'melee', cd:.45, dmg:100, range:3.4},
-    {id:'hammer', name:'Big Hammer',  emoji:'🔨', desc:'Slow · 150 one-hit', kind:'melee', cd:1.0, dmg:150, range:3.0},
-    {id:'noodle', name:'Pool Noodle', emoji:'🍜', desc:'Long reach · 75 dmg', kind:'melee', cd:.6, dmg:75, range:4.8},
-    {id:'knife',  name:'Foam Knife',   emoji:'🔪', desc:'Very fast · 60 dmg', kind:'melee', cd:.3, dmg:60, range:3.0},
+    {id:'bat',    name:'Bat',    emoji:'🏏', desc:'Fast swing · 100 dmg', kind:'melee', cd:.45, dmg:100, range:3.4, price:0},
+    {id:'hammer', name:'Big Hammer',  emoji:'🔨', desc:'Slow · 150 one-hit', kind:'melee', cd:1.0, dmg:150, range:3.0, price:350},
+    {id:'noodle', name:'Pool Noodle', emoji:'🍜', desc:'Long reach · 75 dmg', kind:'melee', cd:.6, dmg:75, range:4.8, price:200},
+    {id:'knife',  name:'Knife',   emoji:'🔪', desc:'Very fast · 60 dmg', kind:'melee', cd:.3, dmg:60, range:3.0, price:300},
   ],
   utility:[
-    {id:'bomb',   name:'Foam Bomb', emoji:'💣', desc:'Throw, pops after 1.2s · 100 dmg', kind:'bomb', cd:7, dmg:100, radius:5.5},
-    {id:'dash',   name:'Dash',      emoji:'💨', desc:'Burst forward', kind:'dash', cd:4},
-    {id:'shield', name:'Shield',    emoji:'🛡️', desc:'3s of no damage', kind:'shield', cd:12, dur:3},
+    {id:'bomb',   name:'Grenade', emoji:'💣', desc:'Throw, pops after 1.2s · 100 dmg', kind:'bomb', cd:7, dmg:100, radius:5.5, price:0},
+    {id:'dash',   name:'Dash',      emoji:'💨', desc:'Burst forward', kind:'dash', cd:4, price:250},
+    {id:'shield', name:'Shield',    emoji:'🛡️', desc:'3s of no damage', kind:'shield', cd:12, dur:3, price:400},
   ]
 };
 const SLOTS=['primary','secondary','melee','utility'];
@@ -794,16 +798,20 @@ function pickWeapon(g){ // loadout screen
   sheet.innerHTML=`<h3>Step 3 of 3 · Loadout</h3><div class="sub">${MAP.name} · ${MODE.emoji} ${MODE.name}</div><div id="lo"></div><button class="pay" id="loPlay">Play ${MODE.name} on ${MAP.name}</button><button class="cancel" id="wCancel">← Back to modes</button>`;
   const lo=sheet.querySelector('#lo');
   for(const k of SLOTS){ const lbl=document.createElement('div'); lbl.className='lo-lbl'; lbl.textContent=k.toUpperCase(); lo.appendChild(lbl); const row=document.createElement('div'); row.className='chips';
-    for(const w of GEAR[k]){ const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.innerHTML=`${w.emoji} ${w.name}<small>${w.desc}</small>`; c.onclick=()=>{ loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; row.appendChild(c); }
+    for(const w of GEAR[k]) row.appendChild(gearChip(k,w,row));
     lo.appendChild(row); }
   sheet.querySelector('#loPlay').onclick=()=>{ if(g.forest){ closeModal(); startGame(g); if(ONLINE_URL) connectBackground(g); } else if(ONLINE_URL) queueOnline(g); else { closeModal(); startGame(g); } };
   sheet.querySelector('#wCancel').onclick=()=>g.forest?closeModal():pickMode(g);
 }
 const loadoutEl=document.getElementById('loadout'), wpnNameEl=document.getElementById('wpnName');
+function gearChip(k,w,row){ const owned=acct.gear.has(w.id); const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.style.opacity=owned?'1':'.75';
+  c.innerHTML=`${w.emoji} ${w.name}${owned?'':' 🔒'}<small>${w.desc}</small>${owned?'':`<small style="color:#b06a00;font-weight:800">${w.price} BB · tap to buy</small>`}`;
+  c.onclick=()=>{ if(!owned){ if(acct.bits<w.price){ toast('Not enough Blockbux',`${w.price-acct.bits} more needed for ${w.name}`); return; } acct.bits-=w.price; acct.gear.add(w.id); fmtBits(); toast(`${w.emoji} Unlocked ${w.name}!`); const n=gearChip(k,w,row); row.replaceChild(n,c); n.click(); return; }
+    loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; return c; }
 function openWeaponSheet(){ if(document.pointerLockElement) document.exitPointerLock(); sheet.innerHTML=`<h3>Change weapons</h3><div class="sub">Takes effect right away</div><div id="lo"></div><button class="pay" id="loApply">Apply</button><button class="cancel" id="loClose">Close</button>`;
   const lo=sheet.querySelector('#lo');
   for(const k of SLOTS){ const lbl=document.createElement('div'); lbl.className='lo-lbl'; lbl.textContent=k.toUpperCase(); lo.appendChild(lbl); const row=document.createElement('div'); row.className='chips';
-    for(const w of GEAR[k]){ const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.innerHTML=`${w.emoji} ${w.name}<small>${w.desc}</small>`; c.onclick=()=>{ loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; row.appendChild(c); } lo.appendChild(row); }
+    for(const w of GEAR[k]) row.appendChild(gearChip(k,w,row)); lo.appendChild(row); }
   const apply=()=>{ closeModal(); renderLoadout(); setSlot(slot); toast('🎒 Loadout updated'); };
   sheet.querySelector('#loApply').onclick=apply; sheet.querySelector('#loClose').onclick=apply; modal.classList.add('show'); }
 document.getElementById('wpnBtn2').onclick=openWeaponSheet;
