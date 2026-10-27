@@ -521,7 +521,7 @@ function pickWeapon(g){ // loadout screen
   for(const k of SLOTS){ const lbl=document.createElement('div'); lbl.className='lo-lbl'; lbl.textContent=k.toUpperCase(); lo.appendChild(lbl); const row=document.createElement('div'); row.className='chips';
     for(const w of GEAR[k]){ const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.innerHTML=`${w.emoji} ${w.name}<small>${w.desc}</small>`; c.onclick=()=>{ loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; row.appendChild(c); }
     lo.appendChild(row); }
-  sheet.querySelector('#loPlay').onclick=()=>{ if(ONLINE_URL) queueOnline(g,g.forest?{coop:true}:null); else { closeModal(); startGame(g); } };
+  sheet.querySelector('#loPlay').onclick=()=>{ if(g.forest){ closeModal(); startGame(g); if(ONLINE_URL) connectBackground(g); } else if(ONLINE_URL) queueOnline(g); else { closeModal(); startGame(g); } };
   sheet.querySelector('#wCancel').onclick=()=>g.forest?closeModal():pickMode(g);
 }
 const loadoutEl=document.getElementById('loadout'), wpnNameEl=document.getElementById('wpnName');
@@ -558,7 +558,13 @@ function pickMap(g){
 const BOTCOLORS=[[0xff4b3a,0x1d2433],[0x8c6cff,0xf4f6fa],[0x3ad39a,0x2b2f6b],[0xffd23f,0xff7a3d]];
 let NET=null; // {ws, me, team, host, players, bots, teams, target, ffa}
 let REM=[];    // remote players in non-arena games: {id,m,net,name}
-function startObby(g){ if(!ONLINE_URL){ startGame(g); return; } MAP={id:g.id,name:g.name}; MODE={id:'race',name:'Race',emoji:'🏁',teams:[8],target:0}; queueOnline(g,{coop:true}); }
+function startObby(g){ MAP={id:g.id,name:g.name}; MODE={id:'race',name:'Race',emoji:'🏁',teams:[8],target:0}; startGame(g); if(ONLINE_URL) connectBackground(g); }
+function connectBackground(g){ // no lobby screen: play right away, others appear when they join
+  let ws; try{ ws=new WebSocket(ONLINE_URL); }catch(e){ return; }
+  const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat}})); };
+  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
+    if(m.t==='start'){ NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; }; spawnRemotes(true); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
+  ws.onerror=()=>{}; }
 function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
   sheet.innerHTML=`<h3>Finding players…</h3><div class="sub" id="qStatus">Connecting to server</div><div class="demo" style="background:#e9f7f1;border-color:#157a56;color:#157a56">${MAP.name} · ${MODE.emoji} ${MODE.name}. ${coop?'Anyone who picks this game in the next few seconds joins you.':'Empty slots get filled with bots when the timer runs out.'}</div><button class="cancel" id="qCancel">Cancel</button>`;
   const status=sheet.querySelector('#qStatus'); let ws, done=false, fallback;
@@ -573,19 +579,21 @@ function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
     if(m.t==='wait') status.textContent=`${m.count} / ${m.max} players · starting in ${m.secs}s`;
     if(m.t==='start'){ done=true; NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:m.bots,teams:m.teams,target:m.target,ffa:m.ffa,coop,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ if(running&&G&&G.arena) toast('Disconnected','bots take over'); NET=null; }; closeModal(); startGame(g); } };
 }
-function spawnRemotes(){ REM=[]; if(!NET) return; const sh=acct.shirt,pa=acct.pants,ha=acct.hat; let i=0;
+function addRemote(pl,i){ const sh=acct.shirt,pa=acct.pants,ha=acct.hat; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); acct.shirt=sh; acct.pants=pa; acct.hat=ha; }
+function spawnRemotes(quiet){ REM=[]; if(!NET) return; const sh=acct.shirt,pa=acct.pants,ha=acct.hat; let i=0;
   for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos).add(new THREE.Vector3((i+1)*1.5,0,0)); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); i++; }
-  acct.shirt=sh; acct.pants=pa; acct.hat=ha; if(REM.length) toast(`${REM.length+1} players in!`,'you can see each other'); else toast('No one else joined','playing solo'); }
+  acct.shirt=sh; acct.pants=pa; acct.hat=ha; if(REM.length) toast(`${REM.length+1} players here`,REM.map(r=>r.name).join(', ')); else if(!quiet) toast('No one else joined','playing solo'); }
 let remTick=0;
 function remoteTick(dt){ if(!NET) return; remTick-=dt; if(remTick<=0){ remTick=.06; netSend({t:'state',p:[+P.pos.x.toFixed(2),+P.pos.y.toFixed(2),+P.pos.z.toFixed(2)],yaw:+P.yaw.toFixed(2)}); }
   const q=NET.q; NET.q=[]; for(const m of q){ if(m.t==='state'){ const r=REM.find(x=>x.id===m.id); if(r) r.net={p:new THREE.Vector3(...m.p),yaw:m.yaw}; }
+    else if(m.t==='join'){ if(!REM.find(x=>x.id===m.player.id)) { addRemote(m.player,REM.length); toast(`${m.player.name} joined`); } }
     else if(m.t==='leave'){ const r=REM.find(x=>x.id===m.id); if(r){ scene.remove(r.m); REM=REM.filter(x=>x!==r); toast(`${r.name} left`); } NET.host=m.host; }
     else if(m.t==='ev'){ onEvent(m); } }
   for(const r of REM){ if(!r.net) continue; r.m.position.lerp(r.net.p,Math.min(1,dt*12)); let d=r.net.yaw+Math.PI-r.m.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); r.m.rotation.y+=d*Math.min(1,dt*12); const w=r.m.position.distanceTo(r.net.p)>.05?Math.sin(S.t*12)*.6:0; r.m.legL.rotation.x=w; r.m.legR.rotation.x=-w; } }
 function sendEv(d){ netSend({t:'ev',d}); }
-function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); const name=who?who.name:'Someone';
+function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); const name=who?who.name:'A player';
   if(d.k==='finish'){ toast(`🏁 ${name} finished!`,`${d.coins} coins · ${d.deaths} wipeouts`); if(who) who.done=true; }
-  if(d.k==='cp'){ toast(`${name} reached stage ${d.stage+1}`); }
+  if(d.k==='cp'){ toast(`${name} reached stage ${d.stage+1}`,''); }
   if(G&&G.forest) forestEvent(m,d,name); }
 function netSend(m){ if(NET&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(m)); }
 function netLeave(){ if(NET){ try{ netSend({t:'leave'}); NET.ws.close(); }catch{} NET=null; } }
