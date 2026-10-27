@@ -159,6 +159,11 @@
   #netPill.show{display:block}
   #netPill i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
   #netPill.on i{background:var(--mint)} #netPill.off i{background:var(--lava)} #netPill.wait i{background:var(--sun)}
+  #feed{position:fixed;left:12px;top:calc(70px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:5px;pointer-events:none;z-index:4;max-width:min(70vw,420px)}
+  .msg{background:rgba(29,36,51,.88);color:#fff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;border-left:4px solid var(--mint);opacity:0;transform:translateX(-10px);transition:opacity .2s,transform .2s;line-height:1.3}
+  .msg.show{opacity:1;transform:none}
+  .msg b{color:var(--sun)}
+  .msg .tag{color:var(--mint);font-weight:900;margin-right:6px}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -258,6 +263,7 @@
   <div id="joy"><div id="knob"></div></div>
   <button id="camBtn">📷 Follow</button>
   <div id="rounds"></div>
+  <div id="feed"></div>
   <div id="netPill"><i></i><span>Connecting to server…</span></div>
   <div id="res"></div>
   <div id="inter"><div class="box"><div class="txt"><h2 id="interTitle">Round over</h2><div class="sub2" id="interSub"></div></div><div class="cnt" id="interCnt">2</div></div></div>
@@ -556,7 +562,7 @@ function forestEvent(m,d,name){ const F=A.F; const host=isHost();
   if(d.k==='cre'&&!host){ const seen=new Set(); for(const c of d.list){ seen.add(c.id); let e=A.bots.find(b=>b.id===c.id); if(!e){ const mm=c.wolf?buildWolf():buildCreature(); mm.position.set(c.x,1.1,c.z); scene.add(mm); e={id:c.id,m:mm,hp:c.hp,team:1,dead:0,creature:true,wolf:c.wolf,net:null}; A.bots.push(e); } e.hp=c.hp; e.net={p:new THREE.Vector3(c.x,1.1,c.z),yaw:c.yaw}; } for(const b of A.bots){ if(!seen.has(b.id)){ scene.remove(b.m); b.dead=9e9; } } A.bots=A.bots.filter(b=>b.dead<=0); }
   if(d.k==='hitc'&&host){ const e=A.bots.find(b=>b.id===d.id); if(e&&e.dead<=0){ e.hp-=d.dmg; if(e.hp<=0){ F.kills++; scene.remove(e.m); e.dead=9e9; A.bots=A.bots.filter(b=>b!==e); } } }
   if(d.k==='hurt'&&d.to===NET.me){ if(A.shieldT<=0){ A.hp-=d.dmg; hurtFlash(); if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Knocked out!','you wake up by the fire'); respawn(); } } }
-  if(d.k==='ko'){ toast(`${name} got knocked out`); } }
+  if(d.k==='ko'){ serverMsg(`💤 <b>${name}</b> got knocked out`); } }
 function applyTake(kind,t,mine){ const F=A.F;
   if(kind==='tree'){ t.wood--; t.leaf.scale.setScalar(.5+Math.max(0,t.wood)/6); if(t.wood<=0){ t.leaf.visible=false; setTimeout(()=>{ t.wood=3; t.leaf.visible=true; t.leaf.scale.setScalar(1); },30000); } }
   else if(kind==='rock'){ t.stone--; t.b.mesh.scale.setScalar(.5+Math.max(0,t.stone)/6); if(t.stone<=0){ t.b.mesh.visible=false; setTimeout(()=>{ t.stone=3; t.b.mesh.visible=true; t.b.mesh.scale.setScalar(1); },45000); } }
@@ -708,19 +714,21 @@ function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
 function addRemote(pl,i){ const sh=acct.shirt,pa=acct.pants,ha=acct.hat,wr=acct.wear; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; acct.wear=av.wear||{head:'cap',body:'shirt',legs:'pants'}; const m=buildAvatar(); acct.wear=wr; teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); acct.shirt=sh; acct.pants=pa; acct.hat=ha; }
 function spawnRemotes(quiet){ REM=[]; if(!NET) return; const sh=acct.shirt,pa=acct.pants,ha=acct.hat; let i=0;
   for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; const myWear=acct.wear; acct.wear=av.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); acct.wear=myWear; teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos).add(new THREE.Vector3((i+1)*1.5,0,0)); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); i++; }
-  acct.shirt=sh; acct.pants=pa; acct.hat=ha; netCount(); if(REM.length) toast(`${REM.length+1} players here`,REM.map(r=>r.name).join(', ')); else if(!quiet) toast('No one else joined','playing solo'); }
+  acct.shirt=sh; acct.pants=pa; acct.hat=ha; netCount(); serverMsg(`Welcome, <b>${acct.name}</b>!`+(REM.length?` Also here: ${REM.map(r=>'<b>'+r.name+'</b>').join(', ')}`:' You\'re the first one in.')); }
 let remTick=0;
 function remoteTick(dt){ if(!NET) return; remTick-=dt; if(remTick<=0){ remTick=.06; netSend({t:'state',p:[+P.pos.x.toFixed(2),+P.pos.y.toFixed(2),+P.pos.z.toFixed(2)],yaw:+P.yaw.toFixed(2)}); }
   const q=NET.q; NET.q=[]; for(const m of q){ if(m.t==='state'){ const r=REM.find(x=>x.id===m.id); if(r) r.net={p:new THREE.Vector3(...m.p),yaw:m.yaw}; }
-    else if(m.t==='join'){ if(!REM.find(x=>x.id===m.player.id)) { addRemote(m.player,REM.length); toast(`${m.player.name} joined`); netCount(); } }
-    else if(m.t==='leave'){ const r=REM.find(x=>x.id===m.id); if(r){ scene.remove(r.m); REM=REM.filter(x=>x!==r); toast(`${r.name} left`); } NET.host=m.host; netCount(); }
+    else if(m.t==='join'){ if(!REM.find(x=>x.id===m.player.id)) { addRemote(m.player,REM.length); serverMsg(`<b>${m.player.name}</b> joined the game`); netCount(); } }
+    else if(m.t==='leave'){ const r=REM.find(x=>x.id===m.id); if(r){ scene.remove(r.m); REM=REM.filter(x=>x!==r); serverMsg(`<b>${r.name}</b> left the game`); } NET.host=m.host; netCount(); }
     else if(m.t==='ev'){ onEvent(m); } }
   for(const r of REM){ if(!r.net) continue; r.m.position.lerp(r.net.p,Math.min(1,dt*12)); let d=r.net.yaw+Math.PI-r.m.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); r.m.rotation.y+=d*Math.min(1,dt*12); const w=r.m.position.distanceTo(r.net.p)>.05?Math.sin(S.t*12)*.6:0; r.m.legL.rotation.x=w; r.m.legR.rotation.x=-w; } }
 function sendEv(d){ netSend({t:'ev',d}); }
 function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); const name=who?who.name:'A player';
-  if(d.k==='finish'){ toast(`🏁 ${name} finished!`,`${d.coins} coins · ${d.deaths} wipeouts`); if(who) who.done=true; }
-  if(d.k==='cp'){ toast(`${name} reached stage ${d.stage+1}`,''); }
+  if(d.k==='finish'){ serverMsg(`🏁 <b>${name}</b> finished the obby! (${d.coins} coins · ${d.deaths} wipeouts)`); if(who) who.done=true; }
+  if(d.k==='cp'){ serverMsg(`<b>${name}</b> reached stage ${d.stage+1}`); }
   if(G&&G.forest) forestEvent(m,d,name); }
+const feedEl=document.getElementById('feed');
+function serverMsg(html){ const d=document.createElement('div'); d.className='msg'; d.innerHTML='<span class="tag">[Server]</span>'+html; feedEl.appendChild(d); requestAnimationFrame(()=>d.classList.add('show')); while(feedEl.children.length>4) feedEl.firstChild.remove(); setTimeout(()=>{ d.classList.remove('show'); setTimeout(()=>d.remove(),250); },6000); }
 function netSend(m){ if(NET&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(m)); }
 function netLeave(){ if(NET){ try{ netSend({t:'leave'}); NET.ws.close(); }catch{} NET=null; } }
 function entById(id){ return A.bots.find(b=>b.id===id); }
@@ -966,8 +974,8 @@ function update(dt){
   P.onGround=false; P.standing=null; const feet=P.pos.y-1.1;
   for(const p of platforms){ const m=p.mesh.position,s=p.size; if(Math.abs(P.pos.x-m.x)>=s.x/2+P.halfW*.6||Math.abs(P.pos.z-m.z)>=s.z/2+P.halfW*.6) continue; const top=m.y+s.y/2;
     if(P.vel.y<=0&&feet<=top+.05&&feet>=top-1.2){ if(p.lava){die();return;} if(p.solid&&s.y>3) continue; P.pos.y=top+1.1; P.vel.y=0; P.onGround=true; P.standing=p;
-      if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); if(NET&&!G.arena) sendEv({k:'cp',stage:S.cp}); }
-      if(p.finish&&!S.done){ S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast('You made it! 🏆',`+${50+bonus} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
+      if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); if(NET&&!G.arena) sendEv({k:'cp',stage:S.cp}); if(!G.arena) serverMsg(`<b>${acct.name}</b> reached stage ${S.cp+1}`); }
+      if(p.finish&&!S.done){ S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); serverMsg(`🏁 <b>${acct.name}</b> finished the obby!`); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast('You made it! 🏆',`+${50+bonus} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
   if(!G.arena) for(const p of platforms){ if(p.lava||p.checkpoint!==undefined||p.finish) continue; const m=p.mesh.position,s=p.size; if(P.pos.y-1.1 < m.y+s.y/2-.3 && P.pos.y+2.3 > m.y-s.y/2) pushOut(P.pos,p); }
   if(P.pos.y<-12) die();
   if(G.arena) updateArena(dt); else remoteTick(dt);
@@ -989,7 +997,7 @@ function startGame(g){ G=g; netPill.className=''; if(!ONLINE_URL) netStatus('off
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; netLeave(); REM=[]; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ running=false; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=leaveGame;
 addEventListener('beforeunload',netLeave);
 
