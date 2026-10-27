@@ -56,7 +56,7 @@
   .buy{background:var(--mint);border:3px solid var(--ink);border-radius:10px;padding:6px 10px;font-weight:800;box-shadow:0 3px 0 var(--ink);font-size:13px;white-space:nowrap}
   .buy[disabled]{background:#dfe3ea;color:var(--muted);box-shadow:none}
   .buy.owned{background:#fff}
-  #prev{width:100%;height:220px;border-radius:12px;background:var(--sky);border:3px solid var(--ink);display:block}
+  #prev{width:100%;max-width:420px;aspect-ratio:3/2.2;height:auto;margin:0 auto;border-radius:12px;background:var(--sky);border:3px solid var(--ink);display:block}
   .hint{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.4}
   /* ---------- game ---------- */
   #game{position:fixed;inset:0;display:none}
@@ -310,7 +310,8 @@ function buildAvatar(){ const g=new THREE.Group(); const skin=0xf1c9a5, shirt=CO
 const prevCanvas=document.getElementById('prev'); const prevR=new THREE.WebGLRenderer({canvas:prevCanvas,antialias:true}); prevR.setClearColor(0x8fd3ff);
 const prevScene=new THREE.Scene(); prevScene.add(new THREE.HemisphereLight(0xffffff,0x6b8f4a,.9)); const pl=new THREE.DirectionalLight(0xffffff,.7); pl.position.set(3,6,5); prevScene.add(pl);
 const prevCam=new THREE.PerspectiveCamera(40,600/440,.1,50); prevCam.position.set(0,2.2,8); prevCam.lookAt(0,1.6,0); let prevAv=null;
-function drawPreview(){ if(prevAv) prevScene.remove(prevAv); prevAv=buildAvatar(); prevAv.rotation.y=Math.PI+.4; prevScene.add(prevAv); prevR.render(prevScene,prevCam); }
+function drawPreview(){ const w=prevCanvas.clientWidth||600, h=prevCanvas.clientHeight||440; prevR.setPixelRatio(Math.min(devicePixelRatio,2)); prevR.setSize(w,h,false); prevCam.aspect=w/h; prevCam.updateProjectionMatrix(); if(prevAv) prevScene.remove(prevAv); prevAv=buildAvatar(); prevAv.rotation.y=Math.PI+.4; prevScene.add(prevAv); prevR.render(prevScene,prevCam); }
+addEventListener('resize',()=>{ if(document.getElementById('s-avatar').classList.contains('active')) drawPreview(); });
 const miniC=document.getElementById('avMini'), miniX=miniC.getContext('2d');
 function drawMini(){ miniX.fillStyle=hex(COLORS[acct.shirt].c); miniX.fillRect(0,0,72,72); miniX.fillStyle='#f1c9a5'; miniX.fillRect(18,16,36,36); miniX.fillStyle=hex(COLORS[acct.hat].c); miniX.fillRect(14,10,44,10); miniX.fillStyle='#1d2433'; miniX.fillRect(26,30,6,7); miniX.fillRect(40,30,6,7); miniX.fillRect(29,44,14,3); }
 
