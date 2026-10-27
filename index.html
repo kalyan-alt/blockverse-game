@@ -189,6 +189,14 @@
   #chatIn{flex:1;font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink);min-width:0}
   #chatSend{background:var(--mint);border:3px solid var(--ink);border-radius:10px;padding:8px 12px;font-weight:900;box-shadow:0 3px 0 var(--ink)}
   @media (hover:hover) and (pointer:fine){#chat{bottom:24px}}
+  #kickScreen{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(29,36,51,.85);padding:20px}
+  #kickScreen.show{display:flex}
+  #kickScreen .card{background:#fff;border:4px solid var(--ink);border-radius:20px;padding:24px;max-width:380px;text-align:center;box-shadow:0 8px 0 var(--ink)}
+  #kickScreen h2{margin-bottom:8px} #kickScreen p{font-weight:700;color:var(--muted);margin-bottom:14px}
+  .modrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .modrow input,.modrow select{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink);flex:1;min-width:90px}
+  .modlist{font-size:12px;font-weight:600;line-height:1.5;max-height:160px;overflow:auto}
+  .modlist b{color:var(--lava)}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -222,6 +230,8 @@
     <div class="copy">© 2026 Blockverse. All rights reserved.<br>Blockverse is an original game and is not affiliated with any other game or company.</div>
   </div>
 </div>
+
+<div id="kickScreen"><div class="card"><h2>⛔ Removed from the game</h2><p id="kickWhy"></p><button class="pay" onclick="document.getElementById('kickScreen').classList.remove('show')">OK</button></div></div>
 
 <!-- ============ HOME ============ -->
 <div id="home">
@@ -276,6 +286,16 @@
         <div class="row"><span class="lbl">Wipeouts</span><span class="val" id="statDeaths">0</span></div>
         <div class="row"><span class="lbl">Camera</span>
           <button class="buy owned" id="camMode">Follow player</button></div>
+      </div>
+      <div class="panel" id="modPanel" style="display:none">
+        <div class="lbl" style="font-weight:800">🛡️ Moderation</div>
+        <div class="modrow"><select id="modAction"><option value="ban">Ban</option><option value="unban">Unban</option><option value="mute">Mute</option><option value="unmute">Unmute</option><option value="kick">Kick</option></select><input id="modUser" placeholder="username"><input id="modMin" type="number" placeholder="minutes (0 = forever)" min="0"></div>
+        <div class="modrow"><input id="modReason" placeholder="reason (shown to the player)"><button class="buy" id="modGo">Apply</button><button class="buy owned" id="modRefresh">Refresh</button></div>
+        <div class="hint" id="modMsg"></div>
+        <div class="lbl" style="font-weight:800;margin-top:10px">Online now</div><div class="modlist" id="modOnline">–</div>
+        <div class="lbl" style="font-weight:800;margin-top:10px">Reports <button class="buy owned" id="modClear" style="font-size:11px;padding:2px 8px">clear</button></div><div class="modlist" id="modReports">–</div>
+        <div class="lbl" style="font-weight:800;margin-top:10px">Active bans & mutes</div><div class="modlist" id="modBans">–</div>
+        <p class="hint">In chat: /ban name [minutes] reason · /unban · /mute · /unmute · /kick. Players can /report name reason. Bad language is auto-warned, then muted, then banned.</p>
       </div>
       <p class="hint">Progress is kept while this page is open. Hook up a save on your server if you want it to stick.</p>
     </section>
@@ -402,6 +422,15 @@ const normName=n=>n.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/0/g,'o').rep
 function nameProblem(n){ if(!/^[A-Za-z0-9_]{3,16}$/.test(n)) return '3–16 letters, numbers or _ only'; const x=normName(n); if(BANNED_WORDS.some(w=>x.includes(normName(w)))) return "That username isn't allowed"; if(/^(admin|server|system|moderator|blockverse)/i.test(n)) return 'That name is reserved'; return null; }
 let authToken=null, signupMode=false, saveTimer=null, dirty=false;
 const store={ get:k=>{ try{ return localStorage.getItem(k); }catch{ return null; } }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, del:k=>{ try{ localStorage.removeItem(k); }catch{} } };
+let isAdminUser=false;
+function showMod(on){ isAdminUser=on; document.getElementById('modPanel').style.display=on?'block':'none'; if(on) refreshMod(); }
+async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?token='+encodeURIComponent(authToken)); const d=await r.json(); if(d.error) throw new Error(d.error);
+  document.getElementById('modOnline').innerHTML=d.online.length?d.online.map(o=>`${o.name} <span style="color:var(--muted)">(${o.room.split('|')[0]})</span>`).join('<br>'):'nobody online';
+  document.getElementById('modReports').innerHTML=d.reports.length?d.reports.map(x=>`<b>${x.user}</b> reported by ${x.by}: ${x.reason||'(no reason)'} <span style="color:var(--muted)">${new Date(x.at).toLocaleString()}</span>`).join('<br>'):'no reports';
+  document.getElementById('modBans').innerHTML=[...d.banned.map(b=>`<b>${b.name}</b> banned${b.until?' until '+new Date(b.until).toLocaleString():' permanently'} ${b.reason?'— '+b.reason:''}`),...d.muted.map(b=>`${b.name} muted until ${new Date(b.until).toLocaleTimeString()}`)].join('<br>')||'none'; document.getElementById('modMsg').textContent=`${d.users} registered users`; }catch(e){ document.getElementById('modMsg').textContent=e.message; } }
+document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
+document.getElementById('modRefresh').onclick=refreshMod;
+document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
 function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{};
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
 function profileOut(){ return {bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
@@ -415,14 +444,14 @@ lgUser.addEventListener('input',()=>{ const p=nameProblem(lgUser.value); lgUser.
 async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=nameProblem(u); if(prob){ lgErr.textContent=prob; return; } if(p.length<4){ lgErr.textContent='Password must be at least 4 characters'; return; }
   if(!ONLINE_URL){ lgErr.textContent='Accounts need the online server'; return; } lgGo.disabled=true; lgErr.className='err ok'; lgErr.textContent=signupMode?'Creating account…':'Signing in…';
   try{ const r=await fetch(SERVER_HTTP+'/auth/'+(signupMode?'signup':'login'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({u,p})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
-    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
   catch(e){ lgErr.className='err'; lgErr.textContent=e.message==='Failed to fetch'?'Server is waking up — try again in a moment':e.message; }
   lgGo.disabled=false; }
 lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
 document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
 function hideLogin(){ document.getElementById('login').style.display='none'; }
 document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
-(async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); authToken=t; applyProfile(d.name,d.profile); hideLogin(); }catch{ store.del('bv_token'); } })();
+(async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); hideLogin(); }catch{ store.del('bv_token'); } })();
 const camModeBtn=document.getElementById('camMode'); camModeBtn.onclick=()=>{acct.follow=!acct.follow; camModeBtn.textContent=acct.follow?'Follow player':'Free drag';};
 
 // swatches
@@ -766,6 +795,7 @@ function connectBackground(g,attempt=1){ // no lobby screen: play right away, ot
   const to=setTimeout(retry,12000);
   const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
+    if(m.t==='kicked'){ clearTimeout(to); kickedOut(m.reason); return; }
     if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); netCount(); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
   ws.onerror=()=>{ clearTimeout(to); retry(); }; ws.onclose=()=>{ if(!NET){ clearTimeout(to); retry(); } }; }
 function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
@@ -779,6 +809,7 @@ function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
   ws.onerror=()=>offline('Server not reachable — playing with bots');
   ws.onclose=()=>{ if(!done) offline('Lost connection — playing with bots'); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
+    if(m.t==='kicked'){ done=true; clearTimeout(fallback); closeModal(); kickedOut(m.reason); return; }
     if(m.t==='wait') status.textContent=`${m.count} / ${m.max} players · starting in ${m.secs}s`;
     if(m.t==='start'){ done=true; NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:m.bots,teams:m.teams,target:m.target,ffa:m.ffa,coop,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ if(running&&G&&G.arena) toast('Disconnected','bots take over'); NET=null; }; closeModal(); startGame(g); setTimeout(netCount,50); } };
 }
@@ -791,7 +822,9 @@ function remoteTick(dt){ if(!NET) return; remTick-=dt; if(remTick<=0){ remTick=.
   const q=NET.q; NET.q=[]; for(const m of q){ if(m.t==='state'){ const r=REM.find(x=>x.id===m.id); if(r) r.net={p:new THREE.Vector3(...m.p),yaw:m.yaw}; }
     else if(m.t==='join'){ if(!REM.find(x=>x.id===m.player.id)) { addRemote(m.player,REM.length); serverMsg(`<b>${m.player.name}</b> joined the game`); netCount(); } }
     else if(m.t==='leave'){ const r=REM.find(x=>x.id===m.id); if(r){ scene.remove(r.m); REM=REM.filter(x=>x!==r); serverMsg(`<b>${r.name}</b> left the game`); } NET.host=m.host; netCount(); }
-    else if(m.t==='ev'){ onEvent(m); } }
+    else if(m.t==='ev'){ onEvent(m); }
+    else if(m.t==='sys'){ chatLine('',m.text,'sys'); toggleChat(true); }
+    else if(m.t==='kicked'){ kickedOut(m.reason); return; } }
   for(const r of REM){ if(!r.net) continue; r.m.position.lerp(r.net.p,Math.min(1,dt*12)); let d=r.net.yaw+Math.PI-r.m.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); r.m.rotation.y+=d*Math.min(1,dt*12); const w=r.m.position.distanceTo(r.net.p)>.05?Math.sin(S.t*12)*.6:0; r.m.legL.rotation.x=w; r.m.legR.rotation.x=-w; } }
 function sendEv(d){ netSend({t:'ev',d}); }
 function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); const name=who?who.name:'A player';
@@ -800,13 +833,14 @@ function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); cons
   if(d.k==='cp'){ serverMsg(`<b>${name}</b> reached stage ${d.stage+1}`); }
   if(G&&G.forest) forestEvent(m,d,name); }
 const feedEl=document.getElementById('feed');
+function kickedOut(reason){ document.getElementById('kickWhy').textContent=reason||'A moderator removed you.'; document.getElementById('kickScreen').classList.add('show'); if(running) leaveGame(); }
 // ---------- chat ----------
 const chatEl=document.getElementById('chat'), chatLog=document.getElementById('chatLog'), chatIn=document.getElementById('chatIn'), chatBtn=document.getElementById('chatBtn'), chatN=document.getElementById('chatN'); let unread=0, lastChat=0;
 function cleanText(t){ return t.split(/(\s+)/).map(w=>{ const n=normName(w); return BANNED_WORDS.some(b=>n&&n.includes(normName(b)))?'*'.repeat(w.length):w; }).join('').slice(0,140); }
 function chatLine(name,text,cls=''){ const d=document.createElement('div'); d.className='c '+cls; d.innerHTML=cls==='sys'?text:`<b>${name}:</b> ${text.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}`; chatLog.appendChild(d); while(chatLog.children.length>60) chatLog.firstChild.remove(); chatLog.scrollTop=chatLog.scrollHeight;
   if(!chatEl.classList.contains('show')&&cls!=='me'&&cls!=='sys'){ unread++; chatN.textContent=unread; chatN.style.display='block'; } }
 function toggleChat(on){ const show=on??!chatEl.classList.contains('show'); chatEl.classList.toggle('show',show); if(show){ unread=0; chatN.style.display='none'; if(matchMedia('(pointer:fine)').matches){ if(document.pointerLockElement) document.exitPointerLock(); chatIn.focus(); } } else chatIn.blur(); }
-function sendChat(){ let t=chatIn.value.trim(); if(!t) return; if(Date.now()-lastChat<800){ chatLine('', 'Slow down a little…','sys'); return; } lastChat=Date.now(); t=cleanText(t); chatIn.value=''; chatLine(acct.name,t,'me'); if(NET) sendEv({k:'chat',text:t}); else chatLine('', 'Not online — no one else can see this','sys'); }
+function sendChat(){ let t=chatIn.value.trim(); if(!t) return; if(Date.now()-lastChat<800){ chatLine('', 'Slow down a little…','sys'); return; } lastChat=Date.now(); chatIn.value=''; if(t.startsWith('/')){ if(NET) sendEv({k:'chat',text:t}); else chatLine('', 'Commands need the online server','sys'); return; } t=cleanText(t); chatLine(acct.name,t,'me'); if(NET) sendEv({k:'chat',text:t}); else chatLine('', 'Not online — no one else can see this','sys'); }
 chatBtn.onclick=()=>toggleChat(); document.getElementById('chatSend').onclick=sendChat;
 chatIn.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') sendChat(); if(e.key==='Escape') toggleChat(false); });
 chatIn.addEventListener('keyup',e=>e.stopPropagation());
@@ -828,6 +862,8 @@ function handleNet(){
     else if(m.t==='round'){ A.roundOver=true; showInter(m.winner>=0?`${A.teams[m.winner]?A.teams[m.winner].name:'Team'} ${m.winner===A.myTeam?'win':'wins'} round ${m.round}`:`Round ${m.round} — draw`, m.winner===A.myTeam?'Point for your team · next round in':'Next round in',ROUND_DELAY); m.rounds.forEach((r,i)=>{ if(A.teams[i]) A.teams[i].rounds=r; }); const w=m.winner; if(w>=0){ toast(`Round ${m.round} — ${A.teams[w]?A.teams[w].name:'Team'} ${w===A.myTeam?'win!':'wins'}`, w===A.myTeam?'🎉 point for your team':'next round in 2.5s'); if(w===A.myTeam){ acct.bits+=10; fmtBits(); } } else toast(`Round ${m.round} — draw`,'next round in 2.5s'); renderRounds(); }
     else if(m.t==='newround'){ A.roundNo=m.round-1; newRound(); }
     else if(m.t==='end'){ hideInter(); if(!A.over){ A.over=true; S.done=true; A.roundOver=true; m.rounds&&m.rounds.forEach((r,i)=>{ if(A.teams[i]) A.teams[i].rounds=r; }); renderRounds(); const line=A.teams.map(t=>t.rounds||0).join(' – '); if(m.winner===A.myTeam){ acct.wins++; acct.bits+=50; fmtBits(); toast('Match won! 🏆',`${MAP.name} · ${MODE.name} · ${line} · +50 Blockbux`,true); } else toast('Match lost 😵',`${A.teams[m.winner]?A.teams[m.winner].name:'Another team'} took the series ${line}`,true); } }
+    else if(m.t==='sys'){ chatLine('',m.text,'sys'); toggleChat(true); }
+    else if(m.t==='kicked'){ kickedOut(m.reason); return; }
     else if(m.t==='ev'){ if(m.d&&m.d.k==='chat'){ const e=entById(m.from); chatLine(e&&e.name?e.name:'Player',String(m.d.text||'').slice(0,140)); } }
     else if(m.t==='leave'){ const e=entById(m.id); if(e){ e.isPlayer=false; e.id=m.bot.id; e.name='Bot'; e.net=null; } NET.host=m.host; if(NET.host===NET.me) toast('You are now host',''); }
   }
@@ -1076,7 +1112,7 @@ addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 
-function startGame(g){ G=g; chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display='block'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(true); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
+function startGame(g){ G=g; chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display='block'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(true); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
