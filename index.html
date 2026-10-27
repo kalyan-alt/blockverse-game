@@ -508,7 +508,7 @@ function pickWeapon(g){ // loadout screen
   sheet.querySelector('#wCancel').onclick=()=>g.forest?closeModal():pickMode(g);
 }
 const loadoutEl=document.getElementById('loadout'), wpnNameEl=document.getElementById('wpnName');
-function openWeaponSheet(){ sheet.innerHTML=`<h3>Change weapons</h3><div class="sub">Takes effect right away</div><div id="lo"></div><button class="pay" id="loApply">Apply</button><button class="cancel" id="loClose">Close</button>`;
+function openWeaponSheet(){ if(document.pointerLockElement) document.exitPointerLock(); sheet.innerHTML=`<h3>Change weapons</h3><div class="sub">Takes effect right away</div><div id="lo"></div><button class="pay" id="loApply">Apply</button><button class="cancel" id="loClose">Close</button>`;
   const lo=sheet.querySelector('#lo');
   for(const k of SLOTS){ const lbl=document.createElement('div'); lbl.className='lo-lbl'; lbl.textContent=k.toUpperCase(); lo.appendChild(lbl); const row=document.createElement('div'); row.className='chips';
     for(const w of GEAR[k]){ const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.innerHTML=`${w.emoji} ${w.name}<small>${w.desc}</small>`; c.onclick=()=>{ loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; row.appendChild(c); } lo.appendChild(row); }
@@ -728,6 +728,10 @@ function updateArena(dt){
 }
 function pushOut(pos,c){ const m=c.mesh.position,s=c.size, r=.8; const dx=pos.x-m.x, dz=pos.z-m.z, ox=s.x/2+r-Math.abs(dx), oz=s.z/2+r-Math.abs(dz); if(ox>0&&oz>0){ if(ox<oz) pos.x+=Math.sign(dx||1)*ox; else pos.z+=Math.sign(dz||1)*oz; } }
 let fireHeld=false, fireQueued=false, slideQueued=false, lastMove=new THREE.Vector3(0,0,-1);
+let firstPerson=true, fpPitch=0;
+function setFP(on){ firstPerson=on; document.getElementById('camBtn').textContent=on?'👁️ 1st person':'🎥 3rd person'; if(!on&&player) player.visible=!(A&&A.meDead); if(on&&document.pointerLockElement!==renderer.domElement&&matchMedia('(pointer:fine)').matches&&G&&G.arena) renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); }
+addEventListener('keydown',e=>{ if(G&&G.arena&&running&&e.code==='KeyP') setFP(!firstPerson); });
+document.addEventListener('mousemove',e=>{ if(document.pointerLockElement===renderer.domElement&&G&&G.arena&&running){ const sens=scoped?.3:1; camYaw-=e.movementX*.0025*sens; fpPitch=Math.max(-1.3,Math.min(1.3,fpPitch-e.movementY*.0025*sens)); } });
 const slideBtn=document.getElementById('slideBtn');
 slideBtn.addEventListener('pointerdown',e=>{ stop(e); slideBtn.classList.add('down'); slideQueued=true; });
 const sEnd=()=>slideBtn.classList.remove('down'); slideBtn.addEventListener('pointerup',sEnd); slideBtn.addEventListener('pointercancel',sEnd);
@@ -737,7 +741,7 @@ function trySlide(){ slideQueued=false; if(!A||A.dash||(A.slideCd||0)>0) return;
 const fireBtn=document.getElementById('fire');
 fireBtn.addEventListener('pointerdown',e=>{ stop(e); fireBtn.setPointerCapture(e.pointerId); fireBtn.classList.add('down'); fireHeld=true; fireQueued=true; });
 const fEnd=()=>{ fireBtn.classList.remove('down'); fireHeld=false; }; fireBtn.addEventListener('pointerup',fEnd); fireBtn.addEventListener('pointercancel',fEnd); fireBtn.addEventListener('lostpointercapture',fEnd);
-renderer.domElement.addEventListener('pointerdown',e=>{ if(G&&G.arena&&e.pointerType==='mouse') fireQueued=true; });
+renderer.domElement.addEventListener('pointerdown',e=>{ if(G&&G.arena&&e.pointerType==='mouse'){ if(firstPerson&&document.pointerLockElement!==renderer.domElement){ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); return; } fireQueued=true; } });
 
 // =============== INPUT (fixed) ===============
 const keys={}; addEventListener('contextmenu',e=>{ if(document.getElementById('game').classList.contains('active')) e.preventDefault(); }); addEventListener('keydown',e=>{keys[e.code]=true; if(e.code==='Space') e.preventDefault();}); addEventListener('keyup',e=>keys[e.code]=false);
@@ -757,10 +761,10 @@ jumpBtn.addEventListener('pointerup',jEnd); jumpBtn.addEventListener('pointercan
 addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat) jumpQueued=true; });
 // look: drag on the world canvas only
 renderer.domElement.addEventListener('pointerdown',e=>{ look.id=e.pointerId; look.lx=e.clientX; look.ly=e.clientY; renderer.domElement.setPointerCapture(e.pointerId); });
-renderer.domElement.addEventListener('pointermove',e=>{ if(e.pointerId!==look.id) return; const sens=scoped?.3:1; camYaw-=(e.clientX-look.lx)*.006*sens; camPitch=Math.min(1.2,Math.max(.1,camPitch+(e.clientY-look.ly)*.004*sens)); look.lx=e.clientX; look.ly=e.clientY; });
+renderer.domElement.addEventListener('pointermove',e=>{ if(e.pointerId!==look.id) return; if(document.pointerLockElement===renderer.domElement) return; const sens=scoped?.3:1; camYaw-=(e.clientX-look.lx)*.006*sens; if(G&&G.arena&&firstPerson) fpPitch=Math.max(-1.3,Math.min(1.3,fpPitch-(e.clientY-look.ly)*.004*sens)); else camPitch=Math.min(1.2,Math.max(.1,camPitch+(e.clientY-look.ly)*.004*sens)); look.lx=e.clientX; look.ly=e.clientY; });
 const lookEnd=e=>{ if(e.pointerId===look.id) look.id=null; };
 renderer.domElement.addEventListener('pointerup',lookEnd); renderer.domElement.addEventListener('pointercancel',lookEnd);
-document.getElementById('camBtn').onclick=()=>{ acct.follow=!acct.follow; document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; camModeBtn.textContent=acct.follow?'Follow player':'Free drag'; };
+document.getElementById('camBtn').onclick=()=>{ if(G&&G.arena){ setFP(!firstPerson); return; } acct.follow=!acct.follow; document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; camModeBtn.textContent=acct.follow?'Follow player':'Free drag'; };
 
 // =============== GAME LOOP ===============
 const toastEl=document.getElementById('toast'); let toastT;
@@ -792,6 +796,7 @@ function update(dt){
   for(const c of coins){ if(c.taken) continue; c.mesh.rotation.z+=dt*3; c.mesh.position.y=c.base+Math.sin(S.t*3)*.15; if(c.mesh.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+1,P.pos.z))<1.5){ c.taken=true; scene.remove(c.mesh); S.coins++; acct.coins++; acct.bits+=5; fmtBits(); if(!G.arena) hud(); } }
   player.position.copy(P.pos); if(G.arena&&A&&A.dash&&A.dash.slide) player.position.y-=.9; player.rotation.y=P.yaw+Math.PI;
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
+  if(G.arena&&firstPerson){ player.visible=false; const eye=new THREE.Vector3(P.pos.x,P.pos.y+2.6,P.pos.z); if(A&&A.dash&&A.dash.slide) eye.y-=.9; camera.position.copy(eye); const dir=new THREE.Vector3(-Math.sin(camYaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(camYaw)*Math.cos(fpPitch)); camera.lookAt(eye.clone().add(dir)); return; }
   if(acct.follow&&look.id===null&&len>.05){ const target=Math.atan2(-move.x,-move.z); let d=target-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*2); }
   const dist=(G.arena&&scoped)?5:11, cx=P.pos.x+Math.sin(camYaw)*Math.cos(camPitch)*dist, cz=P.pos.z+Math.cos(camYaw)*Math.cos(camPitch)*dist, cy=P.pos.y+2+Math.sin(camPitch)*dist;
   camera.position.lerp(tmpV.set(cx,cy,cz),.25); camera.lookAt(P.pos.x,P.pos.y+2,P.pos.z);
@@ -802,11 +807,11 @@ addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 
-function startGame(g){ G=g; JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
+function startGame(g){ G=g; JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(true); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
-  if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · last team standing wins the round`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
+  if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; netLeave(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ running=false; netLeave(); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=leaveGame;
 addEventListener('beforeunload',netLeave);
 
