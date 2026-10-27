@@ -197,6 +197,15 @@
   .modrow input,.modrow select{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink);flex:1;min-width:90px}
   .modlist{font-size:12px;font-weight:600;line-height:1.5;max-height:160px;overflow:auto}
   .modlist b{color:var(--lava)}
+  #menu{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(29,36,51,.6)}
+  #menu.show{display:flex}
+  #menu .card{background:#fff;border:4px solid var(--ink);border-radius:20px;padding:20px;width:min(92vw,360px);box-shadow:0 8px 0 var(--ink)}
+  #menu h2{text-align:center;margin-bottom:12px}
+  #menu .mbtn{display:block;width:100%;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:12px;font-weight:800;font-size:16px;box-shadow:0 4px 0 var(--ink);margin-bottom:10px;text-align:left}
+  #menu .mbtn.primary{background:var(--mint)} #menu .mbtn.danger{background:var(--lava);color:#fff}
+  #menu .mbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #menu .sub{color:var(--muted);font-weight:700;font-size:12px;text-align:center;margin-top:4px}
+  #menu select,#menu input{width:100%;font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:10px;background:#fff;color:var(--ink);margin-bottom:8px}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -314,7 +323,7 @@
 <!-- ============ GAME ============ -->
 <div id="game">
   <div id="hud">
-    <button id="exit">✕ Leave</button>
+    <button id="exit">☰ Menu</button>
     <button id="wpnBtn2">🎒 Change weapons</button>
     <button id="chatBtn" style="display:none">💬 Chat<span class="n" id="chatN">0</span></button>
     <button id="craftBtn">🛠️ Craft</button>
@@ -326,6 +335,7 @@
   <div id="joy"><div id="knob"></div></div>
   <button id="camBtn">📷 Follow</button>
   <div id="rounds"></div>
+  <div id="menu"><div class="card" id="menuCard"></div></div>
   <div id="feed"></div>
   <div id="chat"><div id="chatLog"></div><div id="chatRow"><input id="chatIn" maxlength="140" placeholder="Say something… (Enter)"><button id="chatSend">Send</button></div></div>
   <div id="netPill"><i></i><span>Connecting to server…</span></div>
@@ -833,6 +843,19 @@ function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); cons
   if(d.k==='cp'){ serverMsg(`<b>${name}</b> reached stage ${d.stage+1}`); }
   if(G&&G.forest) forestEvent(m,d,name); }
 const feedEl=document.getElementById('feed');
+// ---------- Esc menu ----------
+const menuEl=document.getElementById('menu'), menuCard=document.getElementById('menuCard'); let menuOpen=false, lockWasOurs=false;
+function openMenu(view='main'){ if(!running) return; menuOpen=true; menuEl.classList.add('show'); if(document.pointerLockElement){ lockWasOurs=true; document.exitPointerLock(); }
+  if(view==='main'){ menuCard.innerHTML=`<h2>Paused</h2><button class="mbtn primary" id="mResume">▶ Resume</button>${G.arena&&!G.forest?'<button class="mbtn" id="mWeapons">🎒 Change weapons</button>':''}<button class="mbtn" id="mReport">🚩 Report a player</button><button class="mbtn danger" id="mLeave">✕ Leave game</button><div class="sub">Esc or ☰ opens this menu</div>`;
+    menuCard.querySelector('#mResume').onclick=closeMenu; menuCard.querySelector('#mLeave').onclick=()=>{ closeMenu(); leaveGame(); }; menuCard.querySelector('#mReport').onclick=()=>openMenu('report'); const w=menuCard.querySelector('#mWeapons'); if(w) w.onclick=()=>{ closeMenu(); openWeaponSheet(); }; }
+  else if(view==='report'){ const names=(G.arena&&!G.forest?A.bots.filter(b=>b.isPlayer).map(b=>b.name):REM.map(r=>r.name)).filter(Boolean);
+    menuCard.innerHTML=`<h2>Report a player</h2>${names.length?`<select id="rpWho">${names.map(n=>`<option>${n}</option>`).join('')}</select>`:'<div class="sub" style="margin-bottom:10px">No other players in this game right now.</div>'}<input id="rpWhy" maxlength="120" placeholder="What happened? (e.g. bad language, cheating)"><button class="mbtn primary" id="rpSend" ${names.length?'':'disabled'}>Send report</button><button class="mbtn" id="rpBack">← Back</button>`;
+    menuCard.querySelector('#rpBack').onclick=()=>openMenu('main'); menuCard.querySelector('#rpSend').onclick=()=>{ const who=menuCard.querySelector('#rpWho').value, why=menuCard.querySelector('#rpWhy').value.trim(); if(!NET){ toast('Reports need the online server'); return; } sendEv({k:'chat',text:`/report ${who} ${why}`}); toast('Report sent','a moderator will take a look'); closeMenu(); }; } }
+function closeMenu(){ menuOpen=false; menuEl.classList.remove('show'); if(lockWasOurs&&G&&G.arena&&firstPerson&&matchMedia('(pointer:fine)').matches){ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); } lockWasOurs=false; }
+menuEl.addEventListener('pointerdown',e=>{ if(e.target===menuEl) closeMenu(); });
+addEventListener('keydown',e=>{ if(e.key!=='Escape'||!running) return; if(modal.classList.contains('show')){ closeModal(); return; } if(chatEl.classList.contains('show')){ toggleChat(false); return; } if(menuOpen) closeMenu(); else openMenu(); });
+document.addEventListener('pointerlockchange',()=>{ // Esc in a mouse-locked arena exits the lock silently, so treat that as "open the menu"
+  if(!document.pointerLockElement&&running&&G&&G.arena&&firstPerson&&!menuOpen&&!modal.classList.contains('show')&&!chatEl.classList.contains('show')&&!lockWasOurs&&document.hasFocus()) openMenu(); });
 function kickedOut(reason){ document.getElementById('kickWhy').textContent=reason||'A moderator removed you.'; document.getElementById('kickScreen').classList.add('show'); if(running) leaveGame(); }
 // ---------- chat ----------
 const chatEl=document.getElementById('chat'), chatLog=document.getElementById('chatLog'), chatIn=document.getElementById('chatIn'), chatBtn=document.getElementById('chatBtn'), chatN=document.getElementById('chatN'); let unread=0, lastChat=0;
@@ -995,7 +1018,7 @@ function arenaHud(){ document.getElementById('pStage').innerHTML='<small>health 
 function updateArena(dt){
   A.fireCd-=dt; A.hitCd-=dt; A.time+=dt; for(const k in slotCd) slotCd[k]-=dt; A.shieldT-=dt; updateCooldownUI();
   if(A.roundOver){ A.interT=(A.interT||0)-dt; document.getElementById('interCnt').textContent=Math.max(0,Math.ceil(A.interT)); if(!NET){ A.roundTimer-=dt; if(A.roundTimer<=0&&!A.over) newRound(); } }
-  if(A.meDead||A.roundOver){ fireQueued=false; slideQueued=false; }
+  if(A.meDead||A.roundOver||menuOpen){ fireQueued=false; slideQueued=false; fireHeld=false; }
   if(A.dash){ P.pos.add(A.dash.dir.clone().multiplyScalar((A.dash.speed||40)*dt)); A.dash.t-=dt; if(A.dash.slide){ player.scale.y=.55; } if(A.dash.t<=0){ A.dash=null; player.scale.y=1; } }
   if(A.swing>0){ A.swing-=dt; player.armR.rotation.x=-2.2+(.3-A.swing)*7; }
   for(const b of A.bombs){ b.t-=dt; b.v.y-=30*dt; b.m.position.add(b.v.clone().multiplyScalar(dt)); if(b.m.position.y<.45){ b.m.position.y=.45; b.v.y*=-.3; b.v.x*=.6; b.v.z*=.6; } const l=A.lim; b.m.position.x=Math.max(-l,Math.min(l,b.m.position.x)); b.m.position.z=Math.max(-l,Math.min(l,b.m.position.z)); if(b.t<=0){ scene.remove(b.m); if(b.remote){ const ring=new THREE.Mesh(new THREE.SphereGeometry(1,16,16),new THREE.MeshBasicMaterial({color:0xff8c42,transparent:true,opacity:.7})); ring.position.copy(b.m.position); scene.add(ring); A.booms.push({m:ring,t:.35}); } else explode(b.m.position); } } A.bombs=A.bombs.filter(b=>b.t>0);
@@ -1046,7 +1069,7 @@ function trySlide(){ slideQueued=false; if(!A||A.dash||(A.slideCd||0)>0) return;
 const fireBtn=document.getElementById('fire');
 fireBtn.addEventListener('pointerdown',e=>{ stop(e); fireBtn.setPointerCapture(e.pointerId); fireBtn.classList.add('down'); fireHeld=true; fireQueued=true; });
 const fEnd=()=>{ fireBtn.classList.remove('down'); fireHeld=false; }; fireBtn.addEventListener('pointerup',fEnd); fireBtn.addEventListener('pointercancel',fEnd); fireBtn.addEventListener('lostpointercapture',fEnd);
-renderer.domElement.addEventListener('pointerdown',e=>{ if(G&&G.arena&&e.pointerType==='mouse'){ if(firstPerson&&document.pointerLockElement!==renderer.domElement){ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); return; } fireQueued=true; } });
+renderer.domElement.addEventListener('pointerdown',e=>{ if(G&&G.arena&&e.pointerType==='mouse'){ if(menuOpen) return; if(firstPerson&&document.pointerLockElement!==renderer.domElement){ renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); return; } fireQueued=true; } });
 
 // =============== INPUT (fixed) ===============
 const keys={}; addEventListener('contextmenu',e=>{ if(document.getElementById('game').classList.contains('active')) e.preventDefault(); }); addEventListener('keydown',e=>{keys[e.code]=true; if(e.code==='Space') e.preventDefault();}); addEventListener('keyup',e=>keys[e.code]=false);
@@ -1086,7 +1109,7 @@ function update(dt){
   ix+=joy.x; iz+=joy.y; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)), right=new THREE.Vector3(-fwd.z,0,fwd.x);
   const move=fwd.multiplyScalar(-iz).add(right.multiplyScalar(ix));
-  if(G.arena&&A&&A.meDead){ move.set(0,0,0); }
+  if((G.arena&&A&&A.meDead)||menuOpen){ move.set(0,0,0); }
   P.vel.x=move.x*G.speed; P.vel.z=move.z*G.speed; if(len>.05){ P.yaw=Math.atan2(move.x,move.z); lastMove.copy(move); } else { lastMove.set(-Math.sin(camYaw),0,-Math.cos(camYaw)); }
   if(jumpQueued&&P.onGround){ P.vel.y=JUMP; P.onGround=false; P.standing=null; } jumpQueued=false; if((keys.Space||jumpHeld)&&P.onGround) {P.vel.y=JUMP; P.onGround=false; P.standing=null;}
   P.vel.y+=GRAV*dt; P.pos.x+=P.vel.x*dt; P.pos.z+=P.vel.z*dt; P.pos.y+=P.vel.y*dt;
@@ -1114,10 +1137,10 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.ge
 
 function startGame(g){ G=g; chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display='block'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(true); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
-  if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
+  if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; chatEl.classList.remove('show'); chatBtn.style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
-document.getElementById('exit').onclick=leaveGame;
+function leaveGame(){ running=false; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
 // ---------- buy Blockbux ----------
