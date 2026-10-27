@@ -164,6 +164,21 @@
   .msg.show{opacity:1;transform:none}
   .msg b{color:var(--sun)}
   .msg .tag{color:var(--mint);font-weight:900;margin-right:6px}
+  #login{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#8fd3ff,#3ad39a);padding:20px}
+  #login .card{background:#fff;border:4px solid var(--ink);border-radius:22px;padding:26px 24px;width:100%;max-width:380px;box-shadow:0 10px 0 var(--ink)}
+  #login h1{font-size:40px;letter-spacing:-2px;line-height:1;text-align:center;margin-bottom:4px}
+  #login .tag{color:var(--muted);font-weight:700;text-align:center;font-size:13px;margin-bottom:18px}
+  #login .f{margin-bottom:10px}#login .f label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:4px}
+  #login .f input{width:100%;font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:10px 12px;background:#fff;color:var(--ink)}
+  #login .f input.bad{border-color:var(--lava)}
+  #login .err{min-height:18px;color:var(--lava);font-weight:700;font-size:12px;margin:2px 0 8px}
+  #login .err.ok{color:#157a56}
+  #login .pay{margin-top:4px}
+  #login .alt{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;font-weight:700}
+  #login .alt button{background:none;border:0;color:#157a56;font-weight:800;text-decoration:underline}
+  #login .guest{width:100%;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:10px;font-weight:800;margin-top:10px}
+  .copy{text-align:center;color:var(--muted);font-size:11px;font-weight:600;margin-top:16px;line-height:1.4}
+  #homeCopy{padding:10px 14px 0;text-align:center;color:var(--muted);font-size:11px;font-weight:600}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -182,6 +197,21 @@
 </style>
 </head>
 <body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="card">
+    <h1>Blockverse</h1>
+    <div class="tag">Sign in to keep your Blockbux, items and stats</div>
+    <div class="f"><label>Username</label><input id="lgUser" maxlength="16" autocomplete="username" placeholder="3–16 letters, numbers or _"></div>
+    <div class="f"><label>Password</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="at least 4 characters"></div>
+    <div class="err" id="lgErr"></div>
+    <button class="pay" id="lgGo">Sign in</button>
+    <div class="alt"><span id="lgSwitchTxt">New here?</span><button id="lgSwitch">Create an account</button></div>
+    <button class="guest" id="lgGuest">Play as guest</button>
+    <div class="copy">© 2026 Blockverse. All rights reserved.<br>Blockverse is an original game and is not affiliated with any other game or company.</div>
+  </div>
+</div>
 
 <!-- ============ HOME ============ -->
 <div id="home">
@@ -228,7 +258,8 @@
     <section class="screen" id="s-account">
       <h2>Account</h2>
       <div class="panel">
-        <div class="row"><span class="lbl">Username</span><input type="text" id="nameIn" maxlength="14"></div>
+        <div class="row"><span class="lbl">Username</span><span class="val" id="nameShow">Guest</span></div>
+        <div class="row"><span class="lbl">Signed in</span><button class="buy owned" id="signOut">Sign out</button></div>
         <div class="row"><span class="lbl">Blockbux</span><span class="val" id="bitsAcct">0</span></div>
         <div class="row"><span class="lbl">Coins collected</span><span class="val" id="statCoins">0</span></div>
         <div class="row"><span class="lbl">Games finished</span><span class="val" id="statWins">0</span></div>
@@ -239,6 +270,7 @@
       <p class="hint">Progress is kept while this page is open. Hook up a save on your server if you want it to stick.</p>
     </section>
   </div>
+  <div id="homeCopy">© 2026 Blockverse. All rights reserved.</div>
   <nav id="tabs">
     <button class="on" data-s="games"><span>🎮</span>Games</button>
     <button data-s="avatar"><span>🧍</span>Avatar</button>
@@ -283,6 +315,7 @@
 // =============== ONLINE CONFIG ===============
 // Paste your deployed server address here, e.g. 'wss://blockverse-server.onrender.com'. Leave '' for bots-only.
 const ONLINE_URL = 'wss://blockverse-server-8enf.onrender.com';
+const SERVER_HTTP = ONLINE_URL.replace(/^wss:/,'https:').replace(/^ws:/,'http:');
 // =============== ACCOUNT / STATE ===============
 const COLORS = [
   {n:'Teal',c:0x1fa9b5,p:0},{n:'Orange',c:0xff7a3d,p:0},{n:'Navy',c:0x2b2f6b,p:0},{n:'White',c:0xf4f6fa,p:0},
@@ -337,7 +370,7 @@ const GAMES = [
   {id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
-function fmtBits(){ document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
+function fmtBits(){ markDirty(); document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
   document.getElementById('statCoins').textContent=acct.coins; document.getElementById('statWins').textContent=acct.wins; document.getElementById('statDeaths').textContent=acct.deaths; }
 function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 
@@ -351,7 +384,33 @@ function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=documen
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+b.dataset.s).classList.add('active'); if(b.dataset.s==='avatar') drawPreview(); });
 document.getElementById('avatarBtn').onclick=()=>document.querySelector('[data-s=account]').click();
-const nameIn=document.getElementById('nameIn'); nameIn.value=acct.name; nameIn.oninput=()=>acct.name=nameIn.value||'Player';
+// ---------- accounts ----------
+const BANNED_WORDS=['fuck','shit','bitch','cunt','dick','cock','pussy','asshole','nigg','fag','retard','whore','slut','rape','nazi','hitler','porn','sex','penis','vagina','boob','kys','hoe','twat','wank','cum','damn','bastard','douche','pedo','molest'];
+const normName=n=>n.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/0/g,'o').replace(/1/g,'i').replace(/3/g,'e').replace(/4/g,'a').replace(/5/g,'s').replace(/7/g,'t').replace(/(.)\1+/g,'$1');
+function nameProblem(n){ if(!/^[A-Za-z0-9_]{3,16}$/.test(n)) return '3–16 letters, numbers or _ only'; const x=normName(n); if(BANNED_WORDS.some(w=>x.includes(normName(w)))) return "That username isn't allowed"; if(/^(admin|server|system|moderator|blockverse)/i.test(n)) return 'That name is reserved'; return null; }
+let authToken=null, signupMode=false, saveTimer=null, dirty=false;
+const store={ get:k=>{ try{ return localStorage.getItem(k); }catch{ return null; } }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, del:k=>{ try{ localStorage.removeItem(k); }catch{} } };
+function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{};
+  document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
+function profileOut(){ return {bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
+function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
+function saveProfile(){ if(!authToken||!dirty) return; dirty=false; fetch(SERVER_HTTP+'/profile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,profile:profileOut()})}).catch(()=>{ dirty=true; }); }
+setInterval(()=>{ if(dirty) saveProfile(); },10000); addEventListener('beforeunload',saveProfile); document.addEventListener('visibilitychange',()=>{ if(document.hidden) saveProfile(); });
+const lgUser=document.getElementById('lgUser'), lgPass=document.getElementById('lgPass'), lgErr=document.getElementById('lgErr'), lgGo=document.getElementById('lgGo');
+function setMode(signup){ signupMode=signup; lgGo.textContent=signup?'Create account':'Sign in'; document.getElementById('lgSwitchTxt').textContent=signup?'Have an account?':'New here?'; document.getElementById('lgSwitch').textContent=signup?'Sign in instead':'Create an account'; lgErr.textContent=''; lgErr.className='err'; }
+document.getElementById('lgSwitch').onclick=()=>setMode(!signupMode);
+lgUser.addEventListener('input',()=>{ const p=nameProblem(lgUser.value); lgUser.classList.toggle('bad',!!p&&lgUser.value.length>0); lgErr.textContent=lgUser.value.length?(p||''):''; lgErr.className='err'; });
+async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=nameProblem(u); if(prob){ lgErr.textContent=prob; return; } if(p.length<4){ lgErr.textContent='Password must be at least 4 characters'; return; }
+  if(!ONLINE_URL){ lgErr.textContent='Accounts need the online server'; return; } lgGo.disabled=true; lgErr.className='err ok'; lgErr.textContent=signupMode?'Creating account…':'Signing in…';
+  try{ const r=await fetch(SERVER_HTTP+'/auth/'+(signupMode?'signup':'login'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({u,p})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
+  catch(e){ lgErr.className='err'; lgErr.textContent=e.message==='Failed to fetch'?'Server is waking up — try again in a moment':e.message; }
+  lgGo.disabled=false; }
+lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
+document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
+function hideLogin(){ document.getElementById('login').style.display='none'; }
+document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
+(async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); authToken=t; applyProfile(d.name,d.profile); hideLogin(); }catch{ store.del('bv_token'); } })();
 const camModeBtn=document.getElementById('camMode'); camModeBtn.onclick=()=>{acct.follow=!acct.follow; camModeBtn.textContent=acct.follow?'Follow player':'Free drag';};
 
 // swatches
@@ -438,7 +497,7 @@ const prevCam=new THREE.PerspectiveCamera(40,600/440,.1,50); prevCam.position.se
 function drawPreview(){ const w=prevCanvas.clientWidth||600, h=prevCanvas.clientHeight||440; prevR.setPixelRatio(Math.min(devicePixelRatio,2)); prevR.setSize(w,h,false); prevCam.aspect=w/h; prevCam.updateProjectionMatrix(); if(prevAv) prevScene.remove(prevAv); prevAv=buildAvatar(); prevAv.rotation.y=Math.PI+.4; prevScene.add(prevAv); prevR.render(prevScene,prevCam); }
 addEventListener('resize',()=>{ if(document.getElementById('s-avatar').classList.contains('active')) drawPreview(); });
 const miniC=document.getElementById('avMini'), miniX=miniC.getContext('2d');
-function drawMini(){ miniX.fillStyle=hex(COLORS[acct.shirt].c); miniX.fillRect(0,0,72,72); miniX.fillStyle='#f1c9a5'; miniX.fillRect(18,16,36,36); if(acct.wear.head!=='none'){ miniX.fillStyle=acct.wear.head==='crown'?'#ffd23f':acct.wear.head==='tophat'?'#1d2433':hex(COLORS[acct.hat].c); miniX.fillRect(14,10,44,10); } miniX.fillStyle='#1d2433'; miniX.fillRect(26,30,6,7); miniX.fillRect(40,30,6,7); miniX.fillRect(29,44,14,3); }
+function drawMini(){ markDirty(); miniX.fillStyle=hex(COLORS[acct.shirt].c); miniX.fillRect(0,0,72,72); miniX.fillStyle='#f1c9a5'; miniX.fillRect(18,16,36,36); if(acct.wear.head!=='none'){ miniX.fillStyle=acct.wear.head==='crown'?'#ffd23f':acct.wear.head==='tophat'?'#1d2433':hex(COLORS[acct.hat].c); miniX.fillRect(14,10,44,10); } miniX.fillStyle='#1d2433'; miniX.fillRect(26,30,6,7); miniX.fillRect(40,30,6,7); miniX.fillRect(29,44,14,3); }
 
 // =============== WORLD BUILDER ===============
 let scene, platforms, coins, checkpoints, player, P, S, G, totalCoins;
@@ -693,7 +752,7 @@ function connectBackground(g,attempt=1){ // no lobby screen: play right away, ot
   let ws; try{ ws=new WebSocket(ONLINE_URL); }catch(e){ netStatus('off','Offline'); return; }
   const retry=()=>{ if(NET||!running||G!==g) return; try{ws.close();}catch{} if(attempt<8) setTimeout(()=>connectBackground(g,attempt+1),4000); else netStatus('off','Offline · server not reachable'); };
   const to=setTimeout(retry,12000);
-  const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
+  const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
     if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); netCount(); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
   ws.onerror=()=>{ clearTimeout(to); retry(); }; ws.onclose=()=>{ if(!NET){ clearTimeout(to); retry(); } }; }
@@ -704,7 +763,7 @@ function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
   sheet.querySelector('#qCancel').onclick=()=>{ done=true; clearTimeout(fallback); try{ws&&ws.close();}catch{} closeModal(); };
   fallback=setTimeout(()=>offline('Server not reachable — playing with bots'),5000);
   try{ ws=new WebSocket(ONLINE_URL); }catch(e){ return offline('Bad server address — playing with bots'); }
-  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:coop,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
+  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:coop,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onerror=()=>offline('Server not reachable — playing with bots');
   ws.onclose=()=>{ if(!done) offline('Lost connection — playing with bots'); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
@@ -1010,9 +1069,8 @@ const modal=document.getElementById('modal'), sheet=document.getElementById('she
 function closeModal(){ modal.classList.remove('show'); }
 addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('show')) closeModal(); if(e.key==='Enter'&&modal.classList.contains('show')){ const b=sheet.querySelector('#payBtn'); if(b&&!b.disabled) b.click(); } });
 modal.addEventListener('pointerdown',e=>{ if(e.target===modal) closeModal(); });
-const SERVER_HTTP = ONLINE_URL.replace(/^wss:/,'https:').replace(/^ws:/,'http:');
 let payToken = null;
-function stripeCheckout(pk){ payToken = payToken || ('t'+Math.random().toString(36).slice(2)+Date.now().toString(36));
+function stripeCheckout(pk){ payToken = authToken || payToken || ('t'+Math.random().toString(36).slice(2)+Date.now().toString(36));
   sheet.innerHTML=`<h3>${pk.bb.toLocaleString()} Blockbux · $${pk.usd.toFixed(2)}</h3><div class="sub">Opening secure checkout…</div><div class="demo" style="background:#e9f7f1;border-color:#157a56;color:#157a56">Payment is handled by Stripe. You'll come back here when it's done.</div><button class="cancel" id="cancelBtn">Cancel</button>`;
   modal.classList.add('show'); sheet.querySelector('#cancelBtn').onclick=closeModal;
   fetch(SERVER_HTTP+'/buy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({bb:pk.bb,token:payToken})}).then(async r=>{ const t=await r.text(); let d; try{ d=JSON.parse(t); }catch{ throw new Error('HTTP '+r.status+' '+t.slice(0,80)); } return d; }).then(d=>{ if(d.url) location.href=d.url; else throw new Error(d.error||'no url'); })
