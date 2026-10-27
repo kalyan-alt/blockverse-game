@@ -45,6 +45,20 @@
   .row:last-child{border-bottom:0}
   .row .lbl{font-weight:700}.row .val{color:var(--muted)}
   input[type=text]{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:8px;padding:6px 10px;width:150px;background:#fff;color:var(--ink)}
+  .catbar{display:flex;gap:8px;margin:12px 0 8px;align-items:center}
+  .catbar input{flex:1;font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:auto}
+  .cattabs{display:flex;gap:6px;margin-bottom:10px}
+  .cattabs button{flex:1;background:#fff;border:3px solid #cfd6e3;border-radius:12px;padding:7px 0;font-weight:800;font-size:13px}
+  .cattabs button.on{border-color:var(--ink);background:#fff6d6;box-shadow:0 3px 0 var(--ink)}
+  .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .item{background:#fff;border:3px solid var(--ink);border-radius:14px;padding:10px;text-align:left;box-shadow:0 4px 0 var(--ink);display:flex;flex-direction:column;gap:4px;position:relative}
+  .item .ic{font-size:30px;line-height:1}
+  .item .nm{font-weight:800;font-size:13px}
+  .item .pr{font-weight:900;font-size:12px;color:var(--muted)}
+  .item.worn{background:#e9f7f1;border-color:#157a56}
+  .item.worn::after{content:"WEARING";position:absolute;right:8px;top:8px;font-size:9px;font-weight:900;color:#157a56}
+  .item.locked .ic{filter:grayscale(1);opacity:.7}
+  .item:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
   .swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
   .sw{width:38px;height:38px;border-radius:10px;border:3px solid transparent;position:relative;padding:0}
   .sw.on{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
@@ -181,6 +195,13 @@
       <h2>Your avatar</h2>
       <canvas id="prev" width="600" height="440"></canvas>
       <div class="panel">
+        <div class="lbl" style="font-weight:800">Catalog</div>
+        <div class="catbar"><input type="text" id="catSearch" placeholder="Search heads, bodies, legs…"></div>
+        <div class="cattabs"><button class="on" data-c="all">All</button><button data-c="head">Heads</button><button data-c="body">Bodies</button><button data-c="legs">Legs</button></div>
+        <div class="items" id="catGrid"></div>
+        <p class="hint">Tap an item to buy it with Blockbux, tap again to wear it. Free items are already yours.</p>
+      </div>
+      <div class="panel">
         <div class="lbl" style="font-weight:800">Shirt</div><div class="swatches" id="swShirt"></div>
         <div class="lbl" style="font-weight:800;margin-top:14px">Pants</div><div class="swatches" id="swPants"></div>
         <div class="lbl" style="font-weight:800;margin-top:14px">Cap</div><div class="swatches" id="swHat"></div>
@@ -261,8 +282,45 @@ const COLORS = [
   {n:'Teal',c:0x1fa9b5,p:0},{n:'Orange',c:0xff7a3d,p:0},{n:'Navy',c:0x2b2f6b,p:0},{n:'White',c:0xf4f6fa,p:0},
   {n:'Lava',c:0xff4b3a,p:60},{n:'Mint',c:0x3ad39a,p:60},{n:'Purple',c:0x8c6cff,p:90},{n:'Gold',c:0xffd23f,p:150},{n:'Midnight',c:0x1d2433,p:120},{n:'Pink',c:0xff6fb5,p:90}
 ];
+const CATALOG=[
+  // heads
+  {id:'cap',     cat:'head', name:'Classic Cap',    emoji:'🧢', price:0,   tags:'hat cap default'},
+  {id:'none',    cat:'head', name:'No Hat',         emoji:'🙂', price:0,   tags:'bare plain'},
+  {id:'tophat',  cat:'head', name:'Top Hat',        emoji:'🎩', price:80,  tags:'fancy formal tall'},
+  {id:'crown',   cat:'head', name:'Gold Crown',     emoji:'👑', price:250, tags:'king queen royal gold'},
+  {id:'horns',   cat:'head', name:'Devil Horns',    emoji:'😈', price:120, tags:'devil red evil'},
+  {id:'halo',    cat:'head', name:'Halo',           emoji:'😇', price:120, tags:'angel light gold'},
+  {id:'viking',  cat:'head', name:'Viking Helm',    emoji:'⚔️', price:160, tags:'helmet warrior horns'},
+  {id:'beanie',  cat:'head', name:'Beanie',         emoji:'🧶', price:60,  tags:'winter warm knit'},
+  {id:'headset', cat:'head', name:'Gamer Headset',  emoji:'🎧', price:140, tags:'gamer music headphones'},
+  {id:'bucket',  cat:'head', name:'Bucket Hat',     emoji:'🪣', price:70,  tags:'summer fishing'},
+  {id:'antenna', cat:'head', name:'Robot Antenna',  emoji:'🤖', price:150, tags:'robot tech'},
+  {id:'cathat',  cat:'head', name:'Cat Ears',       emoji:'🐱', price:130, tags:'cat ears cute animal'},
+  // bodies
+  {id:'shirt',   cat:'body', name:'Plain Shirt',    emoji:'👕', price:0,   tags:'default plain'},
+  {id:'stripe',  cat:'body', name:'Striped Shirt',  emoji:'🦓', price:60,  tags:'stripes lines'},
+  {id:'hoodie',  cat:'body', name:'Hoodie',         emoji:'🧥', price:100, tags:'hood warm'},
+  {id:'tux',     cat:'body', name:'Tuxedo',         emoji:'🤵', price:180, tags:'fancy formal suit bowtie'},
+  {id:'armor',   cat:'body', name:'Knight Armor',   emoji:'🛡️', price:260, tags:'knight metal warrior'},
+  {id:'jersey',  cat:'body', name:'Team Jersey',    emoji:'🏈', price:90,  tags:'sport number team'},
+  {id:'robotb',  cat:'body', name:'Robot Chassis',  emoji:'🤖', price:220, tags:'robot tech'},
+  {id:'vest',    cat:'body', name:'Puffer Vest',    emoji:'🦺', price:110, tags:'winter puffy'},
+  {id:'labcoat', cat:'body', name:'Lab Coat',       emoji:'🥼', price:120, tags:'science white doctor'},
+  {id:'ninja',   cat:'body', name:'Ninja Wrap',     emoji:'🥷', price:200, tags:'ninja dark stealth'},
+  // legs
+  {id:'pants',   cat:'legs', name:'Plain Pants',    emoji:'👖', price:0,   tags:'default plain'},
+  {id:'shorts',  cat:'legs', name:'Shorts',         emoji:'🩳', price:50,  tags:'summer short'},
+  {id:'boots',   cat:'legs', name:'Big Boots',      emoji:'🥾', price:90,  tags:'boots hiking'},
+  {id:'robotl',  cat:'legs', name:'Robot Legs',     emoji:'🦿', price:220, tags:'robot tech metal'},
+  {id:'skirt',   cat:'legs', name:'Skirt',          emoji:'👗', price:80,  tags:'skirt'},
+  {id:'camo',    cat:'legs', name:'Camo Pants',     emoji:'🪖', price:100, tags:'army camo green'},
+  {id:'sneak',   cat:'legs', name:'Sneakers',       emoji:'👟', price:70,  tags:'shoes sport'},
+  {id:'knight',  cat:'legs', name:'Knight Greaves', emoji:'🛡️', price:200, tags:'knight metal armor'},
+  {id:'ninjal',  cat:'legs', name:'Ninja Pants',    emoji:'🥷', price:160, tags:'ninja dark'},
+  {id:'rocket',  cat:'legs', name:'Rocket Boots',   emoji:'🚀', price:300, tags:'rocket fire boots'},
+];
 const acct = { name:'Player'+Math.floor(100+Math.random()*900), bits:40, coins:0, wins:0, deaths:0,
-  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{} };
+  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'} };
 
 const GAMES = [
   {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
@@ -273,7 +331,7 @@ const GAMES = [
   {id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
-function fmtBits(){ document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop();
+function fmtBits(){ document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
   document.getElementById('statCoins').textContent=acct.coins; document.getElementById('statWins').textContent=acct.wins; document.getElementById('statDeaths').textContent=acct.deaths; }
 function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 
@@ -294,6 +352,16 @@ const camModeBtn=document.getElementById('camMode'); camModeBtn.onclick=()=>{acc
 function renderSwatches(){ for(const [id,key] of [['swShirt','shirt'],['swPants','pants'],['swHat','hat']]){ const el=document.getElementById(id); el.innerHTML='';
   COLORS.forEach((c,i)=>{ const s=document.createElement('button'); s.className='sw'+(acct[key]===i?' on':'')+(acct.owned.has(i)?'':' locked'); s.style.background=hex(c.c); s.title=c.n;
     s.onclick=()=>{ if(!acct.owned.has(i)){ document.querySelector('[data-s=shop]').click(); return;} acct[key]=i; renderSwatches(); drawPreview(); drawMini(); }; el.appendChild(s); }); } }
+let catFilter='all';
+function renderCatalog(){ const q=(document.getElementById('catSearch').value||'').toLowerCase().trim(); const grid=document.getElementById('catGrid'); grid.innerHTML='';
+  const list=CATALOG.filter(c=>(catFilter==='all'||c.cat===catFilter)&&(!q||c.name.toLowerCase().includes(q)||c.tags.includes(q)||c.cat.includes(q)));
+  if(!list.length){ grid.innerHTML='<div class="hint">Nothing matches that search.</div>'; return; }
+  for(const c of list){ const owned=acct.items.has(c.id), worn=acct.wear[c.cat]===c.id; const b=document.createElement('button'); b.className='item'+(worn?' worn':'')+(owned?'':' locked');
+    b.innerHTML=`<div class="ic">${c.emoji}</div><div class="nm">${c.name}</div><div class="pr">${worn?'Equipped':owned?'Owned · tap to wear':(c.price+' BB'+(acct.bits<c.price?' · need '+(c.price-acct.bits)+' more':''))}</div><small style="color:var(--muted);font-size:10px">${c.cat==='head'?'Head':c.cat==='body'?'Body':'Legs'}</small>`;
+    b.onclick=()=>{ if(!owned){ if(acct.bits<c.price){ toast('Not enough Blockbux',`${c.price-acct.bits} more needed`); return; } acct.bits-=c.price; acct.items.add(c.id); fmtBits(); toast(`${c.emoji} Bought ${c.name}!`,'tap it again to wear'); renderCatalog(); return; }
+      acct.wear[c.cat]=c.id; renderCatalog(); drawPreview(); drawMini(); }; grid.appendChild(b); } }
+document.getElementById('catSearch').addEventListener('input',renderCatalog);
+document.querySelectorAll('.cattabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.cattabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); catFilter=b.dataset.c; renderCatalog(); });
 function renderShop(){ const el=document.getElementById('shopList'); el.innerHTML=''; COLORS.filter(c=>c.p>0).forEach(c=>{ const i=COLORS.indexOf(c); const owned=acct.owned.has(i); const d=document.createElement('div'); d.className='shop';
   d.innerHTML=`<div class="ico" style="background:${hex(c.c)}"></div><div class="nm">${c.n}<small>Color for shirt, pants or cap</small></div><button class="buy ${owned?'owned':''}" ${(!owned&&acct.bits<c.p)?'disabled':''}>${owned?'Owned':c.p+' BB'}</button>`;
   d.querySelector('button').onclick=()=>{ if(owned) return; acct.bits-=c.p; acct.owned.add(i); fmtBits(); renderShop(); renderSwatches(); }; el.appendChild(d); }); }
@@ -307,8 +375,54 @@ function mat(c){ return new THREE.MeshLambertMaterial({color:c}); }
 // avatar builder
 function buildAvatar(){ const g=new THREE.Group(); const skin=0xf1c9a5, shirt=COLORS[acct.shirt].c, pants=COLORS[acct.pants].c, hat=COLORS[acct.hat].c;
   const part=(w,h,d,c,x,y,z)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c)); m.position.set(x,y,z); m.castShadow=true; g.add(m); return m; };
-  part(1.2,1.2,1.2,skin,0,2.6,0); part(1.3,.35,1.3,hat,0,3.3,0); part(.6,.2,.9,hat,0,3.2,-.75); part(1.6,1.6,.9,shirt,0,1.2,0);
-  g.armL=part(.6,1.5,.6,shirt,-1.1,1.25,0); g.armR=part(.6,1.5,.6,shirt,1.1,1.25,0); g.legL=part(.7,1.4,.7,pants,-.4,-.4,0); g.legR=part(.7,1.4,.7,pants,.4,-.4,0);
+  const W=acct.wear||{head:'cap',body:'shirt',legs:'pants'}; const ink=0x1d2433, gold=0xffd23f, metal=0xb7c0d1, dark=0x2b2f3d;
+  part(1.2,1.2,1.2,skin,0,2.6,0);
+  // ---- head items ----
+  switch(W.head){
+    case 'none': break;
+    case 'tophat': part(1.3,.15,1.3,ink,0,3.25,0); part(.9,1,.9,ink,0,3.8,0); part(.95,.15,.95,0xff4b3a,0,3.4,0); break;
+    case 'crown': part(1.3,.35,1.3,gold,0,3.35,0); for(const x of [-.45,0,.45]) part(.25,.35,.25,gold,x,3.7,-.55); for(const x of [-.45,0,.45]) part(.25,.35,.25,gold,x,3.7,.55); part(.2,.2,.2,0xff4b3a,0,3.55,-.66); break;
+    case 'horns': part(.25,.6,.25,0xff4b3a,-.5,3.5,0); part(.25,.6,.25,0xff4b3a,.5,3.5,0); part(.2,.3,.2,0xff4b3a,-.5,3.9,-.1); part(.2,.3,.2,0xff4b3a,.5,3.9,-.1); break;
+    case 'halo': { const r=new THREE.Mesh(new THREE.TorusGeometry(.6,.08,8,24),mat(gold)); r.rotation.x=Math.PI/2; r.position.y=3.6; g.add(r); } break;
+    case 'viking': part(1.35,.5,1.35,metal,0,3.3,0); part(.25,.6,.25,0xf4f6fa,-.8,3.5,0); part(.25,.6,.25,0xf4f6fa,.8,3.5,0); part(1.4,.15,.3,ink,0,3.1,-.6); break;
+    case 'beanie': part(1.3,.6,1.3,hat,0,3.4,0); part(.4,.4,.4,0xf4f6fa,0,3.85,0); break;
+    case 'headset': part(1.4,.15,.6,ink,0,3.3,0); part(.3,.5,.5,ink,-.75,2.6,0); part(.3,.5,.5,ink,.75,2.6,0); part(.15,.15,.6,0x3ad39a,.75,2.4,-.3); break;
+    case 'bucket': part(1.3,.45,1.3,hat,0,3.35,0); part(1.7,.12,1.7,hat,0,3.15,0); break;
+    case 'antenna': part(1.3,.2,1.3,metal,0,3.3,0); part(.1,.7,.1,metal,0,3.75,0); part(.25,.25,.25,0xff4b3a,0,4.15,0); break;
+    case 'cathat': part(1.3,.3,1.3,hat,0,3.3,0); part(.35,.5,.2,hat,-.45,3.65,0); part(.35,.5,.2,hat,.45,3.65,0); part(.15,.3,.1,0xff6fb5,-.45,3.6,-.1); part(.15,.3,.1,0xff6fb5,.45,3.6,-.1); break;
+    default: part(1.3,.35,1.3,hat,0,3.3,0); part(.6,.2,.9,hat,0,3.2,-.75);
+  }
+  // ---- body items ----
+  const torsoCol={tux:ink,armor:metal,robotb:metal,labcoat:0xf4f6fa,ninja:dark,hoodie:shirt,vest:shirt}[W.body]??shirt;
+  part(1.6,1.6,.9,torsoCol,0,1.2,0);
+  const armCol={tux:ink,armor:metal,robotb:metal,labcoat:0xf4f6fa,ninja:dark}[W.body]??shirt;
+  g.armL=part(.6,1.5,.6,armCol,-1.1,1.25,0); g.armR=part(.6,1.5,.6,armCol,1.1,1.25,0);
+  switch(W.body){
+    case 'stripe': for(const y of [.7,1.2,1.7]) part(1.62,.2,.92,0xf4f6fa,0,y,0); break;
+    case 'hoodie': part(1.4,.5,1.2,shirt,0,2.05,.2); part(.5,.6,.1,0xf4f6fa,0,1.4,-.47); break;
+    case 'tux': part(.5,1.2,.05,0xf4f6fa,0,1.4,-.47); part(.5,.2,.08,0xff4b3a,0,1.95,-.48); break;
+    case 'armor': part(1.7,.3,1,ink,0,.45,0); part(.9,.9,.1,gold,0,1.3,-.47); part(.8,.25,.8,metal,-1.1,2,0); part(.8,.25,.8,metal,1.1,2,0); break;
+    case 'jersey': part(.7,.7,.06,0xf4f6fa,0,1.3,-.47); part(.15,.5,.07,ink,-.12,1.3,-.5); part(.15,.5,.07,ink,.12,1.3,-.5); break;
+    case 'robotb': part(.9,.5,.1,0x3ad39a,0,1.4,-.47); part(.2,.2,.1,0xff4b3a,-.5,.8,-.47); part(.2,.2,.1,gold,.5,.8,-.47); break;
+    case 'vest': part(1.7,1.2,1,0xff8c42,0,1.3,0); part(.3,1.2,1.02,shirt,0,1.3,0); break;
+    case 'labcoat': part(.3,1.4,.06,ink,0,1.3,-.47); part(.5,.15,.08,0x1fa9b5,0,1.9,-.49); break;
+    case 'ninja': part(1.62,.35,.92,0xff4b3a,0,.6,0); part(1.22,.3,1.22,dark,0,2.35,0); break;
+  }
+  // ---- leg items ----
+  const legCol={robotl:metal,knight:metal,ninjal:dark,camo:0x4f6b3a,skirt:pants,shorts:pants,boots:pants,sneak:pants,rocket:pants}[W.legs]??pants;
+  const legH=(W.legs==='shorts'||W.legs==='skirt')?.7:1.4, legY=(W.legs==='shorts'||W.legs==='skirt')?-.05:-.4;
+  g.legL=part(.7,legH,.7,legCol,-.4,legY,0); g.legR=part(.7,legH,.7,legCol,.4,legY,0);
+  switch(W.legs){
+    case 'shorts': part(.6,.7,.6,skin,-.4,-.75,0); part(.6,.7,.6,skin,.4,-.75,0); break;
+    case 'skirt': part(1.9,.6,1.1,pants,0,-.1,0); part(.6,.7,.6,skin,-.4,-.75,0); part(.6,.7,.6,skin,.4,-.75,0); break;
+    case 'boots': part(.8,.6,.9,0x5a351a,-.4,-.85,-.05); part(.8,.6,.9,0x5a351a,.4,-.85,-.05); break;
+    case 'sneak': part(.75,.3,.95,0xf4f6fa,-.4,-1,-.08); part(.75,.3,.95,0xf4f6fa,.4,-1,-.08); part(.76,.1,.96,0xff4b3a,-.4,-1.05,-.08); part(.76,.1,.96,0xff4b3a,.4,-1.05,-.08); break;
+    case 'camo': for(const [x,y] of [[-.5,-.2],[-.3,-.7],[.5,-.5],[.3,0]]) part(.3,.3,.72,0x2f4a28,x,y,0); break;
+    case 'knight': part(.8,.3,.8,gold,-.4,.25,0); part(.8,.3,.8,gold,.4,.25,0); part(.8,.4,.9,ink,-.4,-1,0); part(.8,.4,.9,ink,.4,-1,0); break;
+    case 'robotl': part(.5,.2,.5,0x3ad39a,-.4,-.4,-.3); part(.5,.2,.5,0x3ad39a,.4,-.4,-.3); part(.8,.3,.9,ink,-.4,-1,0); part(.8,.3,.9,ink,.4,-1,0); break;
+    case 'ninjal': part(.72,.3,.72,0xff4b3a,-.4,-.9,0); part(.72,.3,.72,0xff4b3a,.4,-.9,0); break;
+    case 'rocket': part(.8,.6,.9,metal,-.4,-.85,0); part(.8,.6,.9,metal,.4,-.85,0); part(.35,.4,.35,0xff8c42,-.4,-1.3,.2); part(.35,.4,.35,0xff8c42,.4,-1.3,.2); break;
+  }
   part(.2,.25,.05,0x1d2433,-.3,2.75,-.62); part(.2,.25,.05,0x1d2433,.3,2.75,-.62); part(.5,.1,.05,0x1d2433,0,2.35,-.62); return g; }
 
 // avatar preview (separate small renderer)
@@ -318,7 +432,7 @@ const prevCam=new THREE.PerspectiveCamera(40,600/440,.1,50); prevCam.position.se
 function drawPreview(){ const w=prevCanvas.clientWidth||600, h=prevCanvas.clientHeight||440; prevR.setPixelRatio(Math.min(devicePixelRatio,2)); prevR.setSize(w,h,false); prevCam.aspect=w/h; prevCam.updateProjectionMatrix(); if(prevAv) prevScene.remove(prevAv); prevAv=buildAvatar(); prevAv.rotation.y=Math.PI+.4; prevScene.add(prevAv); prevR.render(prevScene,prevCam); }
 addEventListener('resize',()=>{ if(document.getElementById('s-avatar').classList.contains('active')) drawPreview(); });
 const miniC=document.getElementById('avMini'), miniX=miniC.getContext('2d');
-function drawMini(){ miniX.fillStyle=hex(COLORS[acct.shirt].c); miniX.fillRect(0,0,72,72); miniX.fillStyle='#f1c9a5'; miniX.fillRect(18,16,36,36); miniX.fillStyle=hex(COLORS[acct.hat].c); miniX.fillRect(14,10,44,10); miniX.fillStyle='#1d2433'; miniX.fillRect(26,30,6,7); miniX.fillRect(40,30,6,7); miniX.fillRect(29,44,14,3); }
+function drawMini(){ miniX.fillStyle=hex(COLORS[acct.shirt].c); miniX.fillRect(0,0,72,72); miniX.fillStyle='#f1c9a5'; miniX.fillRect(18,16,36,36); if(acct.wear.head!=='none'){ miniX.fillStyle=acct.wear.head==='crown'?'#ffd23f':acct.wear.head==='tophat'?'#1d2433':hex(COLORS[acct.hat].c); miniX.fillRect(14,10,44,10); } miniX.fillStyle='#1d2433'; miniX.fillRect(26,30,6,7); miniX.fillRect(40,30,6,7); miniX.fillRect(29,44,14,3); }
 
 // =============== WORLD BUILDER ===============
 let scene, platforms, coins, checkpoints, player, P, S, G, totalCoins;
@@ -570,7 +684,7 @@ function startObby(g){ MAP={id:g.id,name:g.name}; MODE={id:'race',name:'Race',em
 function connectBackground(g){ // no lobby screen: play right away, others appear when they join
   netStatus('wait','Connecting to server…'); let ws; try{ ws=new WebSocket(ONLINE_URL); }catch(e){ netStatus('off','Offline'); return; }
   const to=setTimeout(()=>{ if(!NET) netStatus('off','Offline · server not reachable'); },8000);
-  const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat}})); };
+  const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
     if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
   ws.onerror=()=>{ clearTimeout(to); netStatus('off','Offline · server not reachable'); }; }
@@ -581,16 +695,16 @@ function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
   sheet.querySelector('#qCancel').onclick=()=>{ done=true; clearTimeout(fallback); try{ws&&ws.close();}catch{} closeModal(); };
   fallback=setTimeout(()=>offline('Server not reachable — playing with bots'),5000);
   try{ ws=new WebSocket(ONLINE_URL); }catch(e){ return offline('Bad server address — playing with bots'); }
-  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:coop,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat}})); };
+  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:coop,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onerror=()=>offline('Server not reachable — playing with bots');
   ws.onclose=()=>{ if(!done) offline('Lost connection — playing with bots'); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
     if(m.t==='wait') status.textContent=`${m.count} / ${m.max} players · starting in ${m.secs}s`;
     if(m.t==='start'){ done=true; NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:m.bots,teams:m.teams,target:m.target,ffa:m.ffa,coop,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ if(running&&G&&G.arena) toast('Disconnected','bots take over'); NET=null; }; closeModal(); startGame(g); setTimeout(netCount,50); } };
 }
-function addRemote(pl,i){ const sh=acct.shirt,pa=acct.pants,ha=acct.hat; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); acct.shirt=sh; acct.pants=pa; acct.hat=ha; }
+function addRemote(pl,i){ const sh=acct.shirt,pa=acct.pants,ha=acct.hat,wr=acct.wear; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; acct.wear=av.wear||{head:'cap',body:'shirt',legs:'pants'}; const m=buildAvatar(); acct.wear=wr; teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); acct.shirt=sh; acct.pants=pa; acct.hat=ha; }
 function spawnRemotes(quiet){ REM=[]; if(!NET) return; const sh=acct.shirt,pa=acct.pants,ha=acct.hat; let i=0;
-  for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos).add(new THREE.Vector3((i+1)*1.5,0,0)); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); i++; }
+  for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; const myWear=acct.wear; acct.wear=av.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); acct.wear=myWear; teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos).add(new THREE.Vector3((i+1)*1.5,0,0)); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); i++; }
   acct.shirt=sh; acct.pants=pa; acct.hat=ha; netCount(); if(REM.length) toast(`${REM.length+1} players here`,REM.map(r=>r.name).join(', ')); else if(!quiet) toast('No one else joined','playing solo'); }
 let remTick=0;
 function remoteTick(dt){ if(!NET) return; remTick-=dt; if(remTick<=0){ remTick=.06; netSend({t:'state',p:[+P.pos.x.toFixed(2),+P.pos.y.toFixed(2),+P.pos.z.toFixed(2)],yaw:+P.yaw.toFixed(2)}); }
@@ -666,16 +780,16 @@ function buildArena(g,block,coin,checkpoint){
   if(M.lavaPools){ for(let i=0;i<M.lavaPools;i++){ const x=(R()-.5)*(SZ-14),z=(R()-.5)*(SZ-14); if(Math.hypot(x,z)<7) continue; block(x,.05,z,4+R()*4,.2,4+R()*4,0xff4b3a,{lava:true}); } }
   for(let i=0;i<10;i++){ let x,z,tries=0; do{ x=(R()-.5)*(SZ-12); z=(R()-.5)*(SZ-12); tries++; }while(tries<10&&A.covers.some(c=>Math.abs(x-c.mesh.position.x)<c.size.x/2+1&&Math.abs(z-c.mesh.position.z)<c.size.z/2+1)); coin(x,1,z); }
   checkpoint(0,0,0,0); checkpoints[0].pos.set(0,1.5,0);
-  const sh=acct.shirt,pa=acct.pants,ha=acct.hat;
+  const sh=acct.shirt,pa=acct.pants,ha=acct.hat,wr=acct.wear; acct.wear={head:'cap',body:'shirt',legs:'pants'};
   A.mode=MODE; A.ffa=MODE.id==='ffa'; A.target=MODE.target; A.teams=MODE.teams.map((n,t)=>({score:0,col:TEAMCOL[t],name:TEAMNAME[t],size:n})); A.myTeam=0;
   if(NET){ // server decided teams, humans and bots
     A.myTeam=NET.team; A.target=NET.target; const nT=NET.ffa?(NET.players.length+NET.bots.length):NET.teams.length;
     A.teams=[]; for(let t=0;t<nT;t++) A.teams.push({score:0,col:TEAMCOL[t%TEAMCOL.length],name:t===A.myTeam?'You':(NET.ffa?'Player '+(t+1):TEAMNAME[t%TEAMNAME.length]),size:1});
     const total=NET.players.length+NET.bots.length; let i=0;
     const place=(m)=>{ const a=i*Math.PI*2/Math.max(1,total)+.8; m.position.set(Math.cos(a)*(SZ/2-8),1.1,Math.sin(a)*(SZ/2-8)); for(const c of A.covers) pushOut(m.position,c); i++; };
-    for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); place(m); scene.add(m); teamRing(m,A.teams[pl.team].col); A.teams[pl.team].name=A.teams[pl.team].name==='You'?'You':pl.name; A.bots.push({id:pl.id,m,hp:HP_MAX,team:pl.team,isPlayer:true,name:pl.name,dead:0,cd:9e9,wp:new THREE.Vector3(),wpT:9e9,score:0}); }
+    for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; const myWear=acct.wear; acct.wear=av.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); acct.wear=myWear; place(m); scene.add(m); teamRing(m,A.teams[pl.team].col); A.teams[pl.team].name=A.teams[pl.team].name==='You'?'You':pl.name; A.bots.push({id:pl.id,m,hp:HP_MAX,team:pl.team,isPlayer:true,name:pl.name,dead:0,cd:9e9,wp:new THREE.Vector3(),wpT:9e9,score:0}); }
     NET.bots.forEach((bt,k)=>{ const bc=BOTCOLORS[k%BOTCOLORS.length]; acct.shirt=COLORS.findIndex(c=>c.c===A.teams[bt.team].col); if(acct.shirt<0) acct.shirt=0; acct.pants=COLORS.findIndex(c=>c.c===bc[1]); acct.hat=acct.pants; const m=buildAvatar(); place(m); scene.add(m); teamRing(m,A.teams[bt.team].col); A.bots.push({id:bt.id,m,hp:HP_MAX,cd:1+R()*2,wp:new THREE.Vector3(),wpT:0,yaw:0,dead:0,team:bt.team,score:0}); });
-    acct.shirt=sh; acct.pants=pa; acct.hat=ha;
+    acct.shirt=sh; acct.pants=pa; acct.hat=ha; acct.wear=wr;
     totalCoins=coins.length; player=buildAvatar(); teamRing(player,A.teams[A.myTeam].col); scene.add(player);
     P={pos:new THREE.Vector3(0,1.5,0),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
     S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1}; camYaw=0; camPitch=.3; { const cnt={}; const sz={}; A.bots.forEach(b=>sz[b.team]=(sz[b.team]||0)+1); sz[A.myTeam]=(sz[A.myTeam]||0)+1; for(const b of A.bots){ cnt[b.team]=(cnt[b.team]||0)+1; if(!b.isPlayer) b.m.position.copy(spawnPoint(b.team,cnt[b.team]-1,sz[b.team])); } } respawn(); hud(); toast(NET.players.length>1?`${NET.players.length} players in!`:'No one else joined','bots fill the rest'); return;
@@ -688,7 +802,7 @@ function buildArena(g,block,coin,checkpoint){
     teamRing(m,A.ffa?bc[0]:TEAMCOL[t]); A.bots.push({m,hp:HP_MAX,cd:1+R()*2,wp:new THREE.Vector3(),wpT:0,yaw:0,dead:0,team,score:0}); idx++; } });
   if(A.ffa){ A.teams=A.teams.slice(0,1).concat(A.teams.slice(MODE.teams.length)); A.bots.forEach((b,i)=>b.team=i+1); A.teams[0].name='You'; }
   { const cnt={}; const sz={}; A.bots.forEach(b=>sz[b.team]=(sz[b.team]||0)+1); sz[0]=(sz[0]||0)+1; for(const b of A.bots){ cnt[b.team]=(cnt[b.team]||0)+1; b.m.position.copy(spawnPoint(b.team,cnt[b.team]-1,sz[b.team])); for(const c of A.covers) pushOut(b.m.position,c); } }
-  acct.shirt=sh; acct.pants=pa; acct.hat=ha;
+  acct.shirt=sh; acct.pants=pa; acct.hat=ha; acct.wear=wr;
   totalCoins=coins.length; player=buildAvatar(); teamRing(player,A.teams[0].col); scene.add(player);
   P={pos:new THREE.Vector3(0,1.5,0),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1}; camYaw=0; camPitch=.3; respawn(); P.pos.copy(spawnPoint(0,0,1)); P.pos.y=1.5; hud();
@@ -919,7 +1033,7 @@ document.getElementById('installBtn').onclick=async()=>{ if(!deferredInstall) re
 document.getElementById('installX').onclick=()=>bar.classList.remove('show');
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-renderGrid(); renderSwatches(); renderShop(); renderPacks(); fmtBits(); drawMini(); drawPreview(); loop(); claimPurchase();
+renderGrid(); renderSwatches(); renderShop(); renderCatalog(); renderPacks(); fmtBits(); drawMini(); drawPreview(); loop(); claimPurchase();
 </script>
 </body>
 </html>
