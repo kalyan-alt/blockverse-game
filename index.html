@@ -260,7 +260,7 @@ const acct = { name:'Player'+Math.floor(100+Math.random()*900), bits:40, coins:0
   owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{} };
 
 const GAMES = [
-  {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · checkpoints · 12 coins', stages:7, speed:9, lava:1},
+  {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
   {id:'lava',  name:'Lava Rush',       emoji:'🌋', bg:'linear-gradient(135deg,#ff8c42,#ff4b3a)', desc:'Fast and hot · 9 stages', stages:9, speed:11, lava:2},
   {id:'sky',   name:'Sky Islands',     emoji:'☁️', bg:'linear-gradient(135deg,#c7e9ff,#8c6cff)', desc:'Long jumps · 6 stages', stages:6, speed:9.5, lava:0, gap:1.4, jump:12.5},
   {id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
@@ -276,7 +276,7 @@ function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 const grid=document.getElementById('gameGrid');
 function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=document.createElement('button'); b.className='game';
   const best=g.arena?undefined:acct.best[g.id]; b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${best} ${g.arena?'tagged out':'wipeouts'}</div>`:''}</div>`;
-  b.onclick=()=>g.forest?pickNights(g):(g.arena?pickMap(g):startGame(g)); grid.appendChild(b);} }
+  b.onclick=()=>g.forest?pickNights(g):(g.arena?pickMap(g):startObby(g)); grid.appendChild(b);} }
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
@@ -348,7 +348,7 @@ function buildWorld(g){
   player=buildAvatar(); scene.add(player);
   P={pos:new THREE.Vector3(0,1.5,0),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages};
-  camYaw=0; camPitch=.45; respawn(); hud();
+  camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
 // ---------- Campfire Nights (survival) ----------
 const DAY_LEN=40, NIGHT_LEN=32; let NIGHTS_TO_WIN=7;
@@ -407,7 +407,7 @@ function buildForest(g,block,coin,checkpoint){
   checkpoint(0,0,6,0); checkpoints[0].pos.set(0,1.5,6);
   totalCoins=coins.length; player=buildAvatar(); teamRing(player,0x3ad39a); scene.add(player);
   P={pos:new THREE.Vector3(0,1.5,6),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
-  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:NIGHTS_TO_WIN}; camYaw=0; camPitch=.4; hud();
+  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:NIGHTS_TO_WIN}; camYaw=0; camPitch=.4; hud(); if(NET){ spawnRemotes(); A.F.wTick=0; A.F.cTick=0; }
 }
 function forestHud(){ const F=A.F; const near=nearThing(), atFire=P.pos.length()<4.5;
   document.getElementById('res').innerHTML=`<div class="rs"><small>🪵</small>${F.wood}</div><div class="rs"><small>🪨</small>${F.stone}</div><div class="rs"><small>🫐</small>${F.berries}</div><div class="rs" style="color:${F.food<30?'var(--lava)':'inherit'}"><small>🍖</small>${Math.ceil(F.food)}</div>${F.items.axe?'<div class="rs">🪓</div>':''}${F.items.torch?'<div class="rs">🔦</div>':''}`;
@@ -420,25 +420,42 @@ function nearThing(){ const F=A.F; let best=null,bd=3.2,kind=null; const chk=(ar
   chk(F.chests,'chest',c=>!c.open); chk(F.bushes,'bush',b=>b.berries>0); chk(F.rocks,'rock',r=>r.stone>0); chk(F.trees,'tree',t=>t.wood>0); return best?{t:best,kind}:null; }
 function nearTree(){ let best=null,bd=3.2; for(const t of A.F.trees){ if(t.wood<=0) continue; const d=Math.hypot(P.pos.x-t.x,P.pos.z-t.z); if(d<bd){bd=d;best=t;} } return best; }
 function forestAction(){ const F=A.F; if(F.chopCd>0) return true;
-  if(P.pos.length()<4.5&&F.wood>0){ F.wood--; F.fuel=Math.min(100,F.fuel+22); F.chopCd=.3; toast('🔥 +fuel'); return true; }
+  if(P.pos.length()<4.5&&F.wood>0){ F.wood--; if(isHost()) F.fuel=Math.min(100,F.fuel+22); else sendEv({k:'feed'}); F.chopCd=.3; toast('🔥 +fuel'); return true; }
   if(P.pos.length()<4.5&&F.berries>0){ F.berries--; F.food=Math.min(100,F.food+18); F.chopCd=.3; toast('🫐 +food'); return true; }
   const n=nearThing(); if(!n) return false; F.chopCd=.6; A.swing=.3; const t=n.t;
-  if(n.kind==='tree'){ const got=F.items.axe?3:1; F.wood+=got; t.wood--; t.leaf.scale.setScalar(.5+t.wood/6); if(t.wood<=0){ t.leaf.visible=false; setTimeout(()=>{ t.wood=3; t.leaf.visible=true; t.leaf.scale.setScalar(1); },30000); } }
-  else if(n.kind==='rock'){ F.stone++; t.stone--; t.b.mesh.scale.setScalar(.5+t.stone/6); if(t.stone<=0){ t.b.mesh.visible=false; setTimeout(()=>{ t.stone=3; t.b.mesh.visible=true; t.b.mesh.scale.setScalar(1); },45000); } }
-  else if(n.kind==='bush'){ F.berries++; t.berries--; t.dots[t.berries]&&(t.dots[t.berries].visible=false); if(t.berries<=0) setTimeout(()=>{ t.berries=3; t.dots.forEach(d=>d.visible=true); },40000); }
-  else if(n.kind==='chest'){ t.open=true; t.lid.position.y=1.45; t.lid.rotation.x=-.9; const roll=Math.random(); let msg; if(roll<.4){ F.wood+=4; F.stone+=2; msg='🪵 4 wood, 🪨 2 stone'; } else if(roll<.7){ F.berries+=4; msg='🫐 4 berries'; } else if(roll<.9){ acct.bits+=25; fmtBits(); msg='💰 25 Blockbux'; } else { F.fuel=100; msg='🔥 lantern oil — fire refilled'; } toast('📦 Chest!',msg); }
+  const arr=n.kind==='tree'?F.trees:n.kind==='rock'?F.rocks:n.kind==='bush'?F.bushes:F.chests; if(NET) sendEv({k:'take',kind:n.kind,i:arr.indexOf(t)});
+  if(n.kind==='tree'){ F.wood+=F.items.axe?3:1; applyTake('tree',t,true); }
+  else if(n.kind==='rock'){ F.stone++; applyTake('rock',t,true); }
+  else if(n.kind==='bush'){ F.berries++; applyTake('bush',t,true); }
+  else if(n.kind==='chest'){ applyTake('chest',t,true); const roll=Math.random(); let msg; if(roll<.4){ F.wood+=4; F.stone+=2; msg='🪵 4 wood, 🪨 2 stone'; } else if(roll<.7){ F.berries+=4; msg='🫐 4 berries'; } else if(roll<.9){ acct.bits+=25; fmtBits(); msg='💰 25 Blockbux'; } else { F.fuel=100; msg='🔥 lantern oil — fire refilled'; } toast('📦 Chest!',msg); }
   return true; }
-function updateForest(dt){ const F=A.F; F.t-=dt; F.chopCd-=dt; F.fuel-=dt*(F.phase==='night'?2.2:1.2); F.food-=dt*.9; if(F.food<=0){ F.food=0; A.hp-=dt*4; if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Starved…','you wake up by the fire, eat something!'); respawn(); } }
-  if(F.t<=0){ if(F.phase==='day'){ F.phase='night'; F.t=NIGHT_LEN; F.spawnT=1; toast(`🌙 Night ${F.night+1}`,'stay in the firelight'); } else { F.night++; F.phase='day'; F.t=DAY_LEN; for(const b of A.bots){ b.dead=9e9; b.m.visible=false; } A.bots=[]; const bk='forest:'+NIGHTS_TO_WIN; if(acct.best[bk]===undefined||F.night>acct.best[bk]) acct.best[bk]=F.night; if(F.night>=NIGHTS_TO_WIN){ A.over=true; S.done=true; acct.wins++; const reward=40+NIGHTS_TO_WIN*6; acct.bits+=reward; fmtBits(); toast('You survived! 🏆',`${NIGHTS_TO_WIN} nights · ${F.kills} shadows banished · +${reward} Blockbux`,true); } else toast(`☀️ Day ${F.night+1}`,'gather wood while it\'s safe'); } }
+function isHost(){ return !NET||NET.host===NET.me; }
+function forestEvent(m,d,name){ const F=A.F; const host=isHost();
+  if(d.k==='world'&&!host){ F.fuel=d.fuel; F.phase=d.phase; F.t=d.t; F.night=d.night; if(d.over&&!A.over){ A.over=true; S.done=true; toast(d.win?'You survived! 🏆':'The fire went out… 😵',d.win?`${NIGHTS_TO_WIN} nights as a team`:`Survived ${F.night} nights`,true); } }
+  if(d.k==='feed'&&host){ F.fuel=Math.min(100,F.fuel+22); }
+  if(d.k==='take'){ const arr=d.kind==='tree'?F.trees:d.kind==='rock'?F.rocks:d.kind==='bush'?F.bushes:F.chests; const t=arr[d.i]; if(t) applyTake(d.kind,t,false); }
+  if(d.k==='cre'&&!host){ const seen=new Set(); for(const c of d.list){ seen.add(c.id); let e=A.bots.find(b=>b.id===c.id); if(!e){ const mm=c.wolf?buildWolf():buildCreature(); mm.position.set(c.x,1.1,c.z); scene.add(mm); e={id:c.id,m:mm,hp:c.hp,team:1,dead:0,creature:true,wolf:c.wolf,net:null}; A.bots.push(e); } e.hp=c.hp; e.net={p:new THREE.Vector3(c.x,1.1,c.z),yaw:c.yaw}; } for(const b of A.bots){ if(!seen.has(b.id)){ scene.remove(b.m); b.dead=9e9; } } A.bots=A.bots.filter(b=>b.dead<=0); }
+  if(d.k==='hitc'&&host){ const e=A.bots.find(b=>b.id===d.id); if(e&&e.dead<=0){ e.hp-=d.dmg; if(e.hp<=0){ F.kills++; scene.remove(e.m); e.dead=9e9; A.bots=A.bots.filter(b=>b!==e); } } }
+  if(d.k==='hurt'&&d.to===NET.me){ if(A.shieldT<=0){ A.hp-=d.dmg; hurtFlash(); if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Knocked out!','you wake up by the fire'); respawn(); } } }
+  if(d.k==='ko'){ toast(`${name} got knocked out`); } }
+function applyTake(kind,t,mine){ const F=A.F;
+  if(kind==='tree'){ t.wood--; t.leaf.scale.setScalar(.5+Math.max(0,t.wood)/6); if(t.wood<=0){ t.leaf.visible=false; setTimeout(()=>{ t.wood=3; t.leaf.visible=true; t.leaf.scale.setScalar(1); },30000); } }
+  else if(kind==='rock'){ t.stone--; t.b.mesh.scale.setScalar(.5+Math.max(0,t.stone)/6); if(t.stone<=0){ t.b.mesh.visible=false; setTimeout(()=>{ t.stone=3; t.b.mesh.visible=true; t.b.mesh.scale.setScalar(1); },45000); } }
+  else if(kind==='bush'){ t.berries--; t.dots[Math.max(0,t.berries)]&&(t.dots[Math.max(0,t.berries)].visible=false); if(t.berries<=0) setTimeout(()=>{ t.berries=3; t.dots.forEach(d=>d.visible=true); },40000); }
+  else if(kind==='chest'){ t.open=true; t.lid.position.y=1.45; t.lid.rotation.x=-.9; } }
+function updateForest(dt){ const F=A.F; const host=isHost(); if(host){ F.t-=dt; } F.chopCd-=dt; if(host) F.fuel-=dt*(F.phase==='night'?2.2:1.2); F.food-=dt*.9; if(F.food<=0){ F.food=0; A.hp-=dt*4; if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Starved…','you wake up by the fire, eat something!'); respawn(); } }
+  if(host&&F.t<=0){ if(F.phase==='day'){ F.phase='night'; F.t=NIGHT_LEN; F.spawnT=1; toast(`🌙 Night ${F.night+1}`,'stay in the firelight'); } else { F.night++; F.phase='day'; F.t=DAY_LEN; for(const b of A.bots){ b.dead=9e9; b.m.visible=false; } A.bots=[]; const bk='forest:'+NIGHTS_TO_WIN; if(acct.best[bk]===undefined||F.night>acct.best[bk]) acct.best[bk]=F.night; if(F.night>=NIGHTS_TO_WIN){ A.over=true; S.done=true; acct.wins++; const reward=40+NIGHTS_TO_WIN*6; acct.bits+=reward; fmtBits(); toast('You survived! 🏆',`${NIGHTS_TO_WIN} nights · ${F.kills} shadows banished · +${reward} Blockbux`,true); } else toast(`☀️ Day ${F.night+1}`,'gather wood while it\'s safe'); } }
   // lighting
   const night=F.phase==='night'; const k=night?Math.min(1,(NIGHT_LEN-F.t)*.5):Math.max(0,1-(DAY_LEN-F.t)*.5); const sky=new THREE.Color(0x9fd3ff).lerp(new THREE.Color(0x0b1026),k); scene.background.copy(sky); scene.fog.color.copy(sky); if(A.F.hemi) A.F.hemi.intensity=.75-.6*k; if(A.F.sun) A.F.sun.intensity=.9-.8*k;
   const lit=F.fuel>0; A.F.flame.visible=lit; A.F.flame.scale.setScalar(lit?.6+F.fuel/150+Math.sin(S.t*14)*.08:0); A.F.glow.intensity=lit?1.2+F.fuel/80:0; A.F.ring.visible=lit; A.F.ring.material.opacity=.15+.25*k;
-  if(!lit){ F.outT+=dt; if(F.outT>12&&!A.over){ A.over=true; S.done=true; const bk='forest:'+NIGHTS_TO_WIN; if(acct.best[bk]===undefined||F.night>acct.best[bk]) acct.best[bk]=F.night; toast('The fire went out… 😵',`Survived ${F.night} nights · ${F.kills} shadows banished`,true); } } else F.outT=0;
+  if(!lit&&host){ F.outT+=dt; if(F.outT>12&&!A.over){ A.over=true; S.done=true; const bk='forest:'+NIGHTS_TO_WIN; if(acct.best[bk]===undefined||F.night>acct.best[bk]) acct.best[bk]=F.night; toast('The fire went out… 😵',`Survived ${F.night} nights · ${F.kills} shadows banished`,true); } } else F.outT=0;
   // creatures
+  if(NET&&host){ F.wTick-=dt; if(F.wTick<=0){ F.wTick=.5; sendEv({k:'world',fuel:F.fuel,phase:F.phase,t:F.t,night:F.night,over:A.over,win:S.done&&F.night>=NIGHTS_TO_WIN}); } F.cTick-=dt; if(F.cTick<=0){ F.cTick=.1; sendEv({k:'cre',list:A.bots.map(c=>({id:c.id,x:+c.m.position.x.toFixed(2),z:+c.m.position.z.toFixed(2),yaw:+c.m.rotation.y.toFixed(2),hp:c.hp,wolf:!!c.wolf}))}); } }
+  if(!host){ for(const c of A.bots){ if(!c.net) continue; c.m.position.lerp(c.net.p,Math.min(1,dt*12)); c.m.rotation.y=c.net.yaw; const w=Math.sin(S.t*9)*.7; c.m.legL.rotation.x=w; c.m.legR.rotation.x=-w; } forestHud(); return; }
   if(night&&!A.over){ F.spawnT-=dt; if(F.spawnT<=0&&A.bots.length<4+F.night*2){ F.spawnT=3.5-Math.min(2,F.night*.3); const a=Math.random()*6.28; const wolf=F.night>=5&&Math.random()<.35; const m=wolf?buildWolf():buildCreature(); m.position.set(Math.cos(a)*(A.lim-5),1.1,Math.sin(a)*(A.lim-5)); scene.add(m); A.bots.push({id:'c'+Math.random(),m,hp:(wolf?150:100)+Math.floor(F.night/4)*25,team:1,dead:0,cd:0,wp:new THREE.Vector3(),wpT:0,creature:true,wolf}); } }
-  for(const c of A.bots){ if(c.dead>0) continue; const to=P.pos.clone().sub(c.m.position); to.y=0; const d=to.length(); const fireD=c.m.position.length(); const sp=(c.wolf?5.2:3.6)+Math.min(3,F.night*.12);
+  for(const c of A.bots){ if(c.dead>0) continue; let tgtPos=P.pos, tgtId=null, best=P.pos.distanceTo(c.m.position); for(const r of REM){ const dd=r.m.position.distanceTo(c.m.position); if(dd<best){ best=dd; tgtPos=r.m.position; tgtId=r.id; } } c.tgtId=tgtId; const to=tgtPos.clone().sub(c.m.position); to.y=0; const d=to.length(); const fireD=c.m.position.length(); const sp=(c.wolf?5.2:3.6)+Math.min(3,F.night*.12);
     for(const w of F.walls) pushOut(c.m.position,w); for(const t of F.traps){ if(t.uses>0&&Math.abs(c.m.position.x-t.m.position.x)<1.3&&Math.abs(c.m.position.z-t.m.position.z)<1.3&&!c.trapCd){ c.trapCd=1; c.hp-=50; t.uses--; if(t.uses<=0){ scene.remove(t.m); (t.m.userData.spikes||[]).forEach(sp2=>scene.remove(sp2)); } if(c.hp<=0){ F.kills++; acct.bits+=2; fmtBits(); scene.remove(c.m); c.dead=9e9; } } } if(c.trapCd) c.trapCd=Math.max(0,c.trapCd-dt); if(c.dead>0) continue;
-    if(F.items.torch&&d<5.5&&!c.wolf){ c.m.position.add(to.clone().normalize().multiplyScalar(-sp*.8*dt)); } else if(lit&&fireD<10&&P.pos.length()<10){ c.m.position.add(c.m.position.clone().setY(0).normalize().multiplyScalar(sp*dt)); } else if(d>1.6){ c.m.position.add(to.normalize().multiplyScalar(sp*dt)); } else { c.cd-=dt; if(c.cd<=0){ c.cd=1; if(A.shieldT<=0){ A.hp-=20; hurtFlash(); A.hitCd=.5; if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Knocked out!','you wake up by the fire'); respawn(); } } } }
+    if(!c.tgtId&&F.items.torch&&d<5.5&&!c.wolf){ c.m.position.add(to.clone().normalize().multiplyScalar(-sp*.8*dt)); } else if(lit&&fireD<10&&tgtPos.length()<10){ c.m.position.add(c.m.position.clone().setY(0).normalize().multiplyScalar(sp*dt)); } else if(d>1.6){ c.m.position.add(to.normalize().multiplyScalar(sp*dt)); } else { c.cd-=dt; if(c.cd<=0){ c.cd=1; if(c.tgtId){ sendEv({k:'hurt',to:c.tgtId,dmg:20}); } else if(A.shieldT<=0){ A.hp-=20; hurtFlash(); A.hitCd=.5; if(A.hp<=0){ A.hp=HP_MAX; S.deaths++; acct.deaths++; F.wood=0; toast('Knocked out!','you wake up by the fire'); if(NET) sendEv({k:'ko'}); respawn(); } } } }
     c.m.rotation.y=Math.atan2(to.x,to.z)+Math.PI; const w=Math.sin(S.t*9+c.m.position.x)*.7; c.m.legL.rotation.x=w; c.m.legR.rotation.x=-w; c.m.position.x=Math.max(-A.lim,Math.min(A.lim,c.m.position.x)); c.m.position.z=Math.max(-A.lim,Math.min(A.lim,c.m.position.z)); }
   A.bots=A.bots.filter(c=>c.dead<=0);
   forestHud(); }
@@ -504,7 +521,7 @@ function pickWeapon(g){ // loadout screen
   for(const k of SLOTS){ const lbl=document.createElement('div'); lbl.className='lo-lbl'; lbl.textContent=k.toUpperCase(); lo.appendChild(lbl); const row=document.createElement('div'); row.className='chips';
     for(const w of GEAR[k]){ const c=document.createElement('button'); c.className='chip2'+(loadout[k]===w?' on':''); c.innerHTML=`${w.emoji} ${w.name}<small>${w.desc}</small>`; c.onclick=()=>{ loadout[k]=w; row.querySelectorAll('.chip2').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }; row.appendChild(c); }
     lo.appendChild(row); }
-  sheet.querySelector('#loPlay').onclick=()=>{ if(ONLINE_URL&&!g.forest) queueOnline(g); else { closeModal(); startGame(g); } };
+  sheet.querySelector('#loPlay').onclick=()=>{ if(ONLINE_URL) queueOnline(g,g.forest?{coop:true}:null); else { closeModal(); startGame(g); } };
   sheet.querySelector('#wCancel').onclick=()=>g.forest?closeModal():pickMode(g);
 }
 const loadoutEl=document.getElementById('loadout'), wpnNameEl=document.getElementById('wpnName');
@@ -540,20 +557,36 @@ function pickMap(g){
 }
 const BOTCOLORS=[[0xff4b3a,0x1d2433],[0x8c6cff,0xf4f6fa],[0x3ad39a,0x2b2f6b],[0xffd23f,0xff7a3d]];
 let NET=null; // {ws, me, team, host, players, bots, teams, target, ffa}
-function queueOnline(g){
-  sheet.innerHTML=`<h3>Finding players…</h3><div class="sub" id="qStatus">Connecting to server</div><div class="demo" style="background:#e9f7f1;border-color:#157a56;color:#157a56">${MAP.name} · ${MODE.emoji} ${MODE.name}. Empty slots get filled with bots when the timer runs out.</div><button class="cancel" id="qCancel">Cancel</button>`;
+let REM=[];    // remote players in non-arena games: {id,m,net,name}
+function startObby(g){ if(!ONLINE_URL){ startGame(g); return; } MAP={id:g.id,name:g.name}; MODE={id:'race',name:'Race',emoji:'🏁',teams:[8],target:0}; queueOnline(g,{coop:true}); }
+function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
+  sheet.innerHTML=`<h3>Finding players…</h3><div class="sub" id="qStatus">Connecting to server</div><div class="demo" style="background:#e9f7f1;border-color:#157a56;color:#157a56">${MAP.name} · ${MODE.emoji} ${MODE.name}. ${coop?'Anyone who picks this game in the next few seconds joins you.':'Empty slots get filled with bots when the timer runs out.'}</div><button class="cancel" id="qCancel">Cancel</button>`;
   const status=sheet.querySelector('#qStatus'); let ws, done=false, fallback;
   const offline=(why)=>{ if(done) return; done=true; clearTimeout(fallback); try{ws&&ws.close();}catch{} NET=null; status.textContent=why; setTimeout(()=>{ closeModal(); startGame(g); },700); };
   sheet.querySelector('#qCancel').onclick=()=>{ done=true; clearTimeout(fallback); try{ws&&ws.close();}catch{} closeModal(); };
   fallback=setTimeout(()=>offline('Server not reachable — playing with bots'),5000);
   try{ ws=new WebSocket(ONLINE_URL); }catch(e){ return offline('Bad server address — playing with bots'); }
-  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat}})); };
+  ws.onopen=()=>{ clearTimeout(fallback); ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:coop,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat}})); };
   ws.onerror=()=>offline('Server not reachable — playing with bots');
   ws.onclose=()=>{ if(!done) offline('Lost connection — playing with bots'); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
     if(m.t==='wait') status.textContent=`${m.count} / ${m.max} players · starting in ${m.secs}s`;
-    if(m.t==='start'){ done=true; NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:m.bots,teams:m.teams,target:m.target,ffa:m.ffa,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ if(running&&G&&G.arena) toast('Disconnected','bots take over'); NET=null; }; closeModal(); startGame(g); } };
+    if(m.t==='start'){ done=true; NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:m.bots,teams:m.teams,target:m.target,ffa:m.ffa,coop,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ if(running&&G&&G.arena) toast('Disconnected','bots take over'); NET=null; }; closeModal(); startGame(g); } };
 }
+function spawnRemotes(){ REM=[]; if(!NET) return; const sh=acct.shirt,pa=acct.pants,ha=acct.hat; let i=0;
+  for(const pl of NET.players){ if(pl.id===NET.me) continue; const av=pl.avatar||{shirt:0,pants:1,hat:2}; acct.shirt=av.shirt; acct.pants=av.pants; acct.hat=av.hat; const m=buildAvatar(); teamRing(m,TEAMCOL[(i+1)%TEAMCOL.length]); m.position.copy(P.pos).add(new THREE.Vector3((i+1)*1.5,0,0)); scene.add(m); REM.push({id:pl.id,m,net:null,name:pl.name,done:false}); i++; }
+  acct.shirt=sh; acct.pants=pa; acct.hat=ha; if(REM.length) toast(`${REM.length+1} players in!`,'you can see each other'); else toast('No one else joined','playing solo'); }
+let remTick=0;
+function remoteTick(dt){ if(!NET) return; remTick-=dt; if(remTick<=0){ remTick=.06; netSend({t:'state',p:[+P.pos.x.toFixed(2),+P.pos.y.toFixed(2),+P.pos.z.toFixed(2)],yaw:+P.yaw.toFixed(2)}); }
+  const q=NET.q; NET.q=[]; for(const m of q){ if(m.t==='state'){ const r=REM.find(x=>x.id===m.id); if(r) r.net={p:new THREE.Vector3(...m.p),yaw:m.yaw}; }
+    else if(m.t==='leave'){ const r=REM.find(x=>x.id===m.id); if(r){ scene.remove(r.m); REM=REM.filter(x=>x!==r); toast(`${r.name} left`); } NET.host=m.host; }
+    else if(m.t==='ev'){ onEvent(m); } }
+  for(const r of REM){ if(!r.net) continue; r.m.position.lerp(r.net.p,Math.min(1,dt*12)); let d=r.net.yaw+Math.PI-r.m.rotation.y; d=Math.atan2(Math.sin(d),Math.cos(d)); r.m.rotation.y+=d*Math.min(1,dt*12); const w=r.m.position.distanceTo(r.net.p)>.05?Math.sin(S.t*12)*.6:0; r.m.legL.rotation.x=w; r.m.legR.rotation.x=-w; } }
+function sendEv(d){ netSend({t:'ev',d}); }
+function onEvent(m){ const d=m.d||{}; const who=REM.find(r=>r.id===m.from); const name=who?who.name:'Someone';
+  if(d.k==='finish'){ toast(`🏁 ${name} finished!`,`${d.coins} coins · ${d.deaths} wipeouts`); if(who) who.done=true; }
+  if(d.k==='cp'){ toast(`${name} reached stage ${d.stage+1}`); }
+  if(G&&G.forest) forestEvent(m,d,name); }
 function netSend(m){ if(NET&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(m)); }
 function netLeave(){ if(NET){ try{ netSend({t:'leave'}); NET.ws.close(); }catch{} NET=null; } }
 function entById(id){ return A.bots.find(b=>b.id===id); }
@@ -570,6 +603,7 @@ function handleNet(){
     else if(m.t==='round'){ A.roundOver=true; showInter(m.winner>=0?`${A.teams[m.winner]?A.teams[m.winner].name:'Team'} ${m.winner===A.myTeam?'win':'wins'} round ${m.round}`:`Round ${m.round} — draw`, m.winner===A.myTeam?'Point for your team · next round in':'Next round in',ROUND_DELAY); m.rounds.forEach((r,i)=>{ if(A.teams[i]) A.teams[i].rounds=r; }); const w=m.winner; if(w>=0){ toast(`Round ${m.round} — ${A.teams[w]?A.teams[w].name:'Team'} ${w===A.myTeam?'win!':'wins'}`, w===A.myTeam?'🎉 point for your team':'next round in 2.5s'); if(w===A.myTeam){ acct.bits+=10; fmtBits(); } } else toast(`Round ${m.round} — draw`,'next round in 2.5s'); renderRounds(); }
     else if(m.t==='newround'){ A.roundNo=m.round-1; newRound(); }
     else if(m.t==='end'){ hideInter(); if(!A.over){ A.over=true; S.done=true; A.roundOver=true; m.rounds&&m.rounds.forEach((r,i)=>{ if(A.teams[i]) A.teams[i].rounds=r; }); renderRounds(); const line=A.teams.map(t=>t.rounds||0).join(' – '); if(m.winner===A.myTeam){ acct.wins++; acct.bits+=50; fmtBits(); toast('Match won! 🏆',`${MAP.name} · ${MODE.name} · ${line} · +50 Blockbux`,true); } else toast('Match lost 😵',`${A.teams[m.winner]?A.teams[m.winner].name:'Another team'} took the series ${line}`,true); } }
+    else if(m.t==='ev'){ }
     else if(m.t==='leave'){ const e=entById(m.id); if(e){ e.isPlayer=false; e.id=m.bot.id; e.name='Bot'; e.net=null; } NET.host=m.host; if(NET.host===NET.me) toast('You are now host',''); }
   }
 }
@@ -686,8 +720,9 @@ function explode(pos){ const ring=new THREE.Mesh(new THREE.SphereGeometry(1,16,1
 function applyHit(best,dmg,byTeam=A.myTeam,byId=null){
   if(A.roundOver) return;
   if(byTeam===A.myTeam&&!byId) dmgText(best.m.position.clone().add(new THREE.Vector3(0,3.6,0)),Math.min(dmg,best.hp),(!NET)&&best.hp-dmg<=0);
-  if(NET){ if(byTeam===A.myTeam&&!byId) A.dmgTotal=(A.dmgTotal||0)+dmg; netSend({t:'hit',target:best.id,dmg,by:byId||NET.me}); return; }
+  if(NET&&!A.forest){ if(byTeam===A.myTeam&&!byId) A.dmgTotal=(A.dmgTotal||0)+dmg; netSend({t:'hit',target:best.id,dmg,by:byId||NET.me}); return; }
   best.hp-=dmg; if(byTeam===A.myTeam) A.dmgTotal=(A.dmgTotal||0)+dmg;
+  if(A.forest&&NET&&!isHost()){ best.hp+=dmg; sendEv({k:'hitc',id:best.id,dmg}); acct.bits+=0; return; }
   if(best.hp<=0){ best.dead=9e9; best.m.visible=false; if(A.forest){ A.F.kills++; acct.bits+=2; fmtBits(); scene.remove(best.m); A.bots=A.bots.filter(x=>x!==best); return; } creditTag(byTeam); renderRounds(); checkRoundEnd(); }
 }
 function creditTag(team){ A.teams[team].score++; if(team===A.myTeam){ A.score++; acct.bits+=3; fmtBits(); } }
@@ -713,7 +748,7 @@ function updateArena(dt){
   // keep player inside arena & out of covers
   const lim=A.lim; P.pos.x=Math.max(-lim,Math.min(lim,P.pos.x)); P.pos.z=Math.max(-lim,Math.min(lim,P.pos.z));
   for(const c of A.covers) pushOut(P.pos,c);
-  if(A.forest){ { const lim=A.lim; P.pos.x=Math.max(-lim,Math.min(lim,P.pos.x)); P.pos.z=Math.max(-lim,Math.min(lim,P.pos.z)); for(const c of A.covers) pushOut(P.pos,c); } updateForest(dt); const camRay=new THREE.Ray(camera.position.clone(),new THREE.Vector3()); camera.getWorldDirection(camRay.direction); const sph=new THREE.Sphere(); let over=false; for(const b of A.bots){ sph.set(b.m.position.clone().add(new THREE.Vector3(0,1.8,0)),1.6); if(camRay.intersectsSphere(sph)){over=true;break;} } xhair.classList.toggle('target',over); return; }
+  if(A.forest){ remoteTick(dt); { const lim=A.lim; P.pos.x=Math.max(-lim,Math.min(lim,P.pos.x)); P.pos.z=Math.max(-lim,Math.min(lim,P.pos.z)); for(const c of A.covers) pushOut(P.pos,c); } updateForest(dt); const camRay=new THREE.Ray(camera.position.clone(),new THREE.Vector3()); camera.getWorldDirection(camRay.direction); const sph=new THREE.Sphere(); let over=false; for(const b of A.bots){ sph.set(b.m.position.clone().add(new THREE.Vector3(0,1.8,0)),1.6); if(camRay.intersectsSphere(sph)){over=true;break;} } xhair.classList.toggle('target',over); return; }
   handleNet(); netSync(dt); const isHost=!NET||NET.host===NET.me;
   for(const b of A.bots){
     if(b.isPlayer) continue; // remote humans are moved by netSync
@@ -797,11 +832,11 @@ function update(dt){
   P.onGround=false; P.standing=null; const feet=P.pos.y-1.1;
   for(const p of platforms){ const m=p.mesh.position,s=p.size; if(Math.abs(P.pos.x-m.x)>=s.x/2+P.halfW*.6||Math.abs(P.pos.z-m.z)>=s.z/2+P.halfW*.6) continue; const top=m.y+s.y/2;
     if(P.vel.y<=0&&feet<=top+.05&&feet>=top-1.2){ if(p.lava){die();return;} if(p.solid&&s.y>3) continue; P.pos.y=top+1.1; P.vel.y=0; P.onGround=true; P.standing=p;
-      if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); }
-      if(p.finish&&!S.done){ S.done=true; const bonus=Math.max(0,30-S.deaths*5); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast('You made it! 🏆',`+${50+bonus} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
+      if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); if(NET&&!G.arena) sendEv({k:'cp',stage:S.cp}); }
+      if(p.finish&&!S.done){ S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast('You made it! 🏆',`+${50+bonus} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
   if(!G.arena) for(const p of platforms){ if(p.lava||p.checkpoint!==undefined||p.finish) continue; const m=p.mesh.position,s=p.size; if(P.pos.y-1.1 < m.y+s.y/2-.3 && P.pos.y+2.3 > m.y-s.y/2) pushOut(P.pos,p); }
   if(P.pos.y<-12) die();
-  if(G.arena) updateArena(dt);
+  if(G.arena) updateArena(dt); else remoteTick(dt);
   for(const c of coins){ if(c.taken) continue; c.mesh.rotation.z+=dt*3; c.mesh.position.y=c.base+Math.sin(S.t*3)*.15; if(c.mesh.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+1,P.pos.z))<1.5){ c.taken=true; scene.remove(c.mesh); S.coins++; acct.coins++; acct.bits+=5; fmtBits(); if(!G.arena) hud(); } }
   player.position.copy(P.pos); if(G.arena&&A&&A.dash&&A.dash.slide) player.position.y-=.9; player.rotation.y=P.yaw+Math.PI;
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
@@ -820,7 +855,7 @@ function startGame(g){ G=g; JUMP=g.jump||11.5; if(scene) disposeScene(); buildWo
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; netLeave(); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ running=false; netLeave(); REM=[]; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=leaveGame;
 addEventListener('beforeunload',netLeave);
 
