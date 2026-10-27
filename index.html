@@ -681,13 +681,16 @@ const netPill=document.getElementById('netPill');
 function netStatus(state,text){ netPill.className='show '+state; netPill.querySelector('span').textContent=text; }
 function netCount(){ const n=1+(G&&G.arena&&!G.forest?A.bots.filter(b=>b.isPlayer).length:REM.length); netStatus('on',`Online · ${n} player${n>1?'s':''}`); }
 function startObby(g){ MAP={id:g.id,name:g.name}; MODE={id:'race',name:'Race',emoji:'🏁',teams:[8],target:0}; startGame(g); if(ONLINE_URL) connectBackground(g); }
-function connectBackground(g){ // no lobby screen: play right away, others appear when they join
-  netStatus('wait','Connecting to server…'); let ws; try{ ws=new WebSocket(ONLINE_URL); }catch(e){ netStatus('off','Offline'); return; }
-  const to=setTimeout(()=>{ if(!NET) netStatus('off','Offline · server not reachable'); },8000);
+function connectBackground(g,attempt=1){ // no lobby screen: play right away, others appear when they join
+  if(!running||G!==g) return; netStatus('wait',attempt===1?'Connecting to server…':`Waking server… try ${attempt}`);
+  if(attempt===1) fetch(SERVER_HTTP,{mode:'cors'}).catch(()=>{}); // nudges a sleeping free-tier server awake
+  let ws; try{ ws=new WebSocket(ONLINE_URL); }catch(e){ netStatus('off','Offline'); return; }
+  const retry=()=>{ if(NET||!running||G!==g) return; try{ws.close();}catch{} if(attempt<8) setTimeout(()=>connectBackground(g,attempt+1),4000); else netStatus('off','Offline · server not reachable'); };
+  const to=setTimeout(retry,12000);
   const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
   ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
-    if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
-  ws.onerror=()=>{ clearTimeout(to); netStatus('off','Offline · server not reachable'); }; }
+    if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); netCount(); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
+  ws.onerror=()=>{ clearTimeout(to); retry(); }; ws.onclose=()=>{ if(!NET){ clearTimeout(to); retry(); } }; }
 function queueOnline(g,opts){ const coop=!!(opts&&opts.coop);
   sheet.innerHTML=`<h3>Finding players…</h3><div class="sub" id="qStatus">Connecting to server</div><div class="demo" style="background:#e9f7f1;border-color:#157a56;color:#157a56">${MAP.name} · ${MODE.emoji} ${MODE.name}. ${coop?'Anyone who picks this game in the next few seconds joins you.':'Empty slots get filled with bots when the timer runs out.'}</div><button class="cancel" id="qCancel">Cancel</button>`;
   const status=sheet.querySelector('#qStatus'); let ws, done=false, fallback;
