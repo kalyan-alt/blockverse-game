@@ -226,6 +226,12 @@
   #qpanel .sp{font-size:12px;font-weight:800;color:var(--muted);margin-top:4px}
   #qpanel .sp b{color:#157a56}
   #wall{position:fixed;left:0;right:0;top:0;height:6px;background:var(--lava);transform-origin:left;display:none;z-index:9}
+  .lobbyList{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+  .lp{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:4px 10px;font-weight:800;font-size:12px}
+  .lp.me{background:var(--sun)}
+  .lobbySum{display:flex;gap:8px;margin:10px 0}
+  .lobbySum button{flex:1;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink);text-align:left}
+  .lobbySum button small{display:block;color:var(--muted);font-weight:700;font-size:10px}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -456,7 +462,7 @@ function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 const grid=document.getElementById('gameGrid');
 function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=document.createElement('button'); b.className='game';
   const best=g.arena?undefined:(g.escape?acct.best['escape_world']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'world '+best+' · '+(acct.best['escape_wins']||0)+' wins':best+' wipeouts'}</div>`:''}</div>`;
-  b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?pickMap(g):startObby(g)); grid.appendChild(b);} }
+  b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);} }
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
@@ -827,6 +833,37 @@ const MAPS=[
   {id:'maze',  name:'Block Maze',  emoji:'🧱', bg:'linear-gradient(135deg,#8c6cff,#3ad39a)', desc:'Long walls — close quarters', sky:0xd9d2ff, floor:0xe2e6ef, size:50, covers:0,  seed:99,   bots:4, target:12, maze:true},
 ];
 let MAP=MAPS[0];
+// ---------- Blaster Arena lobby ----------
+let LOB=null; // {ws, players:[{id,name}], me}
+function openLobby(g){ MAP=MAP&&MAP.id!=='woods'?MAP:MAPS[0]; if(!MODE||!MODE.teams||MODE.id==='race'||MODE.id==='survival') MODE=MODES[0];
+  sheet.innerHTML=`<h3>Blaster Arena</h3><div class="sub" id="lobStatus">Connecting to server…</div><div class="lobbySum"><button id="lobMap">🗺️ ${MAP.name}<small>map · tap to change</small></button><button id="lobMode">${MODE.emoji} ${MODE.name}<small>mode · tap to change</small></button><button id="lobLoad">🎒 ${loadout.primary.name}<small>loadout · tap to change</small></button></div><div class="lbl" style="font-weight:800;font-size:12px;color:var(--muted)">IN THE LOBBY</div><div class="lobbyList" id="lobList"><span class="lp me">${acct.name}</span></div><button class="pay" id="lobPlay" disabled>▶ Play</button><button class="cancel" id="lobLeave">Leave lobby</button>`;
+  modal.classList.add('show');
+  sheet.querySelector('#lobMap').onclick=()=>{ lobbyPause(); pickMap(g); patchPickersBack(g); };
+  sheet.querySelector('#lobMode').onclick=()=>{ lobbyPause(); pickMode(g); patchPickersBack(g); };
+  sheet.querySelector('#lobLoad').onclick=()=>{ lobbyPause(); pickWeapon(g); patchPickersBack(g); };
+  sheet.querySelector('#lobLeave').onclick=()=>{ closeLobby(); closeModal(); };
+  sheet.querySelector('#lobPlay').onclick=()=>{ closeLobby(); queueOnline(g); };
+  if(!ONLINE_URL){ lobStatusSet('Offline — bots only'); sheet.querySelector('#lobPlay').disabled=false; return; }
+  connectLobby(g); }
+function lobStatusSet(t){ const e=document.getElementById('lobStatus'); if(e) e.textContent=t; }
+function connectLobby(g){ if(LOB){ renderLobby(); return; } fetch(SERVER_HTTP).catch(()=>{}); let ws; try{ ws=new WebSocket(ONLINE_URL); }catch{ lobStatusSet('Server not reachable — bots only'); enablePlay(); return; }
+  const to=setTimeout(()=>{ if(!LOB){ lobStatusSet('Waking server… hang on'); } },6000); const give=setTimeout(()=>{ if(!LOB){ lobStatusSet('Server not reachable — bots only'); enablePlay(); try{ws.close();}catch{} } },45000);
+  ws.onopen=()=>ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:'arena-lobby',mode:'lobby',teams:[8],target:0,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}}));
+  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
+    if(m.t==='start'){ clearTimeout(to); clearTimeout(give); LOB={ws,me:m.you,players:m.players.map(p=>({id:p.id,name:p.name}))}; lobStatusSet('Connected · pick your map, mode and loadout, then Play'); enablePlay(); renderLobby(); }
+    else if(m.t==='join'&&LOB){ LOB.players.push({id:m.player.id,name:m.player.name}); renderLobby(); }
+    else if(m.t==='leave'&&LOB){ LOB.players=LOB.players.filter(p=>p.id!==m.id); renderLobby(); }
+    else if(m.t==='kicked'){ closeLobby(); closeModal(); kickedOut(m.reason); } };
+  ws.onerror=()=>{ clearTimeout(to); clearTimeout(give); lobStatusSet('Server not reachable — bots only'); enablePlay(); };
+  ws.onclose=()=>{ if(LOB&&LOB.ws===ws){ LOB=null; lobStatusSet('Disconnected'); } }; }
+function enablePlay(){ const b=document.getElementById('lobPlay'); if(b) b.disabled=false; }
+function renderLobby(){ const list=document.getElementById('lobList'); if(!list||!LOB) return; list.innerHTML=LOB.players.map(p=>`<span class="lp ${p.id===LOB.me?'me':''}">${p.name}</span>`).join(''); lobStatusSet(`Connected · ${LOB.players.length} in the lobby`); }
+function lobbyPause(){}
+function closeLobby(){ if(LOB){ try{ LOB.ws.send(JSON.stringify({t:'leave'})); LOB.ws.close(); }catch{} LOB=null; } }
+function patchPickersBack(g){ // when a picker finishes or is cancelled, return to the lobby instead of starting
+  setTimeout(()=>{ const cancel=sheet.querySelector('#mapCancel,#modeBack,#wCancel'); if(cancel) cancel.onclick=()=>openLobby(g); const play=sheet.querySelector('#loPlay'); if(play) play.onclick=()=>openLobby(g);
+    sheet.querySelectorAll('#mapList .pack').forEach((b,i)=>{ const orig=b.onclick; b.onclick=()=>{ MAP=MAPS[i]; openLobby(g); }; });
+    sheet.querySelectorAll('#modeList .pack').forEach((b,i)=>{ b.onclick=()=>{ MODE=MODES[i]; openLobby(g); }; }); },0); }
 const MODES=[
   {id:'ffa',  name:'Free-for-all', emoji:'🔥', desc:'Everyone vs everyone', teams:[1,1,1,1,1,1], target:15},
   {id:'1v1',  name:'1v1', emoji:'⚔️', desc:'Just you and one bot', teams:[1,1], target:10},
@@ -1292,7 +1329,7 @@ function renderPacks(){ const el=document.getElementById('packs'); el.innerHTML=
   b.innerHTML=`${pk.tag?`<span class="tag">${pk.tag}</span>`:''}<svg viewBox="0 0 24 24" width="40" height="40"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><div class="amt">${pk.bb.toLocaleString()} Blockbux<small>${(pk.usd/pk.bb*100).toFixed(2)}¢ each</small></div><div class="price">$${pk.usd.toFixed(2)}</div>`;
   b.onclick=()=>openCheckout(pk); el.appendChild(b);} }
 const modal=document.getElementById('modal'), sheet=document.getElementById('sheet');
-function closeModal(){ modal.classList.remove('show'); }
+function closeModal(){ modal.classList.remove('show'); if(LOB&&!sheet.querySelector('#qStatus')) closeLobby(); }
 addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('show')) closeModal(); if(e.key==='Enter'&&modal.classList.contains('show')){ const b=sheet.querySelector('#payBtn'); if(b&&!b.disabled) b.click(); } });
 modal.addEventListener('pointerdown',e=>{ if(e.target===modal) closeModal(); });
 let payToken = null;
