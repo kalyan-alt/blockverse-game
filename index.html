@@ -218,6 +218,14 @@
   .seg button{background:#fff;border:0;padding:6px 10px;font-weight:800;font-size:12px}
   .seg button.on{background:var(--sun)}
   #fps{position:fixed;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));background:rgba(29,36,51,.8);color:#fff;font-weight:800;font-size:11px;border-radius:8px;padding:3px 7px;display:none;z-index:4;pointer-events:none}
+  #qpanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:#fff;border:4px solid var(--ink);border-radius:18px;padding:12px 16px;box-shadow:0 6px 0 var(--ink);display:none;z-index:9;text-align:center;min-width:260px}
+  #qpanel.show{display:block}
+  #qpanel .q{font-size:30px;font-weight:900;letter-spacing:1px}
+  #qpanel input{font:inherit;font-size:26px;font-weight:900;text-align:center;width:120px;border:3px solid var(--ink);border-radius:12px;padding:6px;margin-top:6px;background:#fff;color:var(--ink)}
+  #qpanel .good{border-color:var(--mint)!important;background:#e9f7f1!important} #qpanel .bad{border-color:var(--lava)!important;background:#ffe8e5!important}
+  #qpanel .sp{font-size:12px;font-weight:800;color:var(--muted);margin-top:4px}
+  #qpanel .sp b{color:#157a56}
+  #wall{position:fixed;left:0;right:0;top:0;height:6px;background:var(--lava);transform-origin:left;display:none;z-index:9}
   #wpnBtn2{pointer-events:auto;background:var(--sun);border:3px solid var(--ink);border-radius:14px;padding:6px 12px;font-weight:800;box-shadow:0 4px 0 var(--ink);font-size:13px;display:none}
   
   #slideBtn{position:fixed;right:22px;bottom:calc(150px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;background:#8c6cff;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:13px;display:none}
@@ -287,6 +295,7 @@
     <section class="screen" id="s-shop">
       <h2>Shop</h2>
       <div class="panel" id="shopList"></div>
+      <div class="panel" id="boostPanel"><div class="lbl" style="font-weight:800">⚡ Speed Escape boosts</div><div class="shop"><div class="ico" style="background:var(--sun);display:flex;align-items:center;justify-content:center;font-size:22px">⚡</div><div class="nm">Permanent +1 starting speed<small id="boostLvl">Level 0 / 5</small></div><button class="buy" id="boostBuy">150 BB</button></div></div>
       <p class="hint">Earn Blockbux by collecting coins (5 each) and finishing games (50, plus a bonus for fewer wipeouts).</p>
       <button class="buy" id="toBuy" style="width:100%;padding:12px;font-size:16px">Get more Blockbux</button>
     </section>
@@ -358,6 +367,7 @@
   <div id="joy"><div id="knob"></div></div>
   <button id="camBtn">📷 Follow</button>
   <div id="rounds"></div>
+  <div id="qpanel"><div class="q" id="qText">3 × 4 = ?</div><input id="qIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off"><div class="sp" id="qInfo">speed <b>6</b></div></div>
   <div id="fps">60 fps</div>
   <div id="menu"><div class="card" id="menuCard"></div></div>
   <div id="feed"></div>
@@ -426,25 +436,26 @@ const CATALOG=[
   {id:'rocket',  cat:'legs', name:'Rocket Boots',   emoji:'🚀', price:300, tags:'rocket fire boots'},
 ];
 const acct = { name:'Player'+Math.floor(100+Math.random()*900), bits:40, coins:0, wins:0, deaths:0,
-  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'}, gear:new Set(['blaster','sidearm','bat','bomb']) };
+  owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, boost:0, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'}, gear:new Set(['blaster','sidearm','bat','bomb']) };
 
 const GAMES = [
   {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
   {id:'lava',  name:'Lava Rush',       emoji:'🌋', bg:'linear-gradient(135deg,#ff8c42,#ff4b3a)', desc:'Fast and hot · 9 stages', stages:9, speed:11, lava:2},
   {id:'sky',   name:'Sky Islands',     emoji:'☁️', bg:'linear-gradient(135deg,#c7e9ff,#8c6cff)', desc:'Long jumps · 6 stages', stages:6, speed:9.5, lava:0, gap:1.4, jump:12.5},
   {id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
+  {id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'Type the answers to run · +1 speed per correct · outrun the lava', stages:10, speed:6, lava:0, escape:true},
   {id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
   {id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
-function fmtBits(){ markDirty(); document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
+function fmtBits(){ markDirty(); document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderBoost==='function'&&document.getElementById('boostLvl')) renderBoost(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
   document.getElementById('statCoins').textContent=acct.coins; document.getElementById('statWins').textContent=acct.wins; document.getElementById('statDeaths').textContent=acct.deaths; }
 function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 
 // game grid
 const grid=document.getElementById('gameGrid');
 function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=document.createElement('button'); b.className='game';
-  const best=g.arena?undefined:acct.best[g.id]; b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${best} ${g.arena?'tagged out':'wipeouts'}</div>`:''}</div>`;
+  const best=g.arena?undefined:(g.escape?acct.best['escape']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'stage '+(best+1):best+' wipeouts'}</div>`:''}</div>`;
   b.onclick=()=>g.forest?pickNights(g):(g.arena?pickMap(g):startObby(g)); grid.appendChild(b);} }
 
 // tabs
@@ -473,9 +484,9 @@ async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?tok
 document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
 document.getElementById('modRefresh').onclick=refreshMod;
 document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
-function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
+function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
-function profileOut(){ return {settings:SET,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
+function profileOut(){ return {settings:SET,boost:acct.boost||0,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
 function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
 function saveProfile(){ if(!authToken||!dirty) return; dirty=false; fetch(SERVER_HTTP+'/profile',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,profile:profileOut()})}).catch(()=>{ dirty=true; }); }
 setInterval(()=>{ if(dirty) saveProfile(); },10000); addEventListener('beforeunload',saveProfile); document.addEventListener('visibilitychange',()=>{ if(document.hidden) saveProfile(); });
@@ -539,6 +550,8 @@ function renderCatalog(){ const q=(document.getElementById('catSearch').value||'
       acct.wear[c.cat]=c.id; renderCatalog(); drawPreview(); drawMini(); }; grid.appendChild(b); } }
 document.getElementById('catSearch').addEventListener('input',renderCatalog);
 document.querySelectorAll('.cattabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.cattabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); catFilter=b.dataset.c; renderCatalog(); });
+function renderBoost(){ const lv=acct.boost||0, price=150+lv*100; document.getElementById('boostLvl').textContent=`Level ${lv} / 5 · start at speed ${6+lv}`; const b=document.getElementById('boostBuy'); b.textContent=lv>=5?'Maxed':price+' BB'; b.disabled=lv>=5||acct.bits<price; b.className='buy'+(lv>=5?' owned':''); }
+document.getElementById('boostBuy').onclick=()=>{ const lv=acct.boost||0, price=150+lv*100; if(lv>=5||acct.bits<price) return; acct.bits-=price; acct.boost=lv+1; fmtBits(); renderBoost(); toast('⚡ Speed boost!',`you now start Speed Escape at speed ${6+acct.boost}`); };
 function renderShop(){ const el=document.getElementById('shopList'); el.innerHTML=''; COLORS.filter(c=>c.p>0).forEach(c=>{ const i=COLORS.indexOf(c); const owned=acct.owned.has(i); const d=document.createElement('div'); d.className='shop';
   d.innerHTML=`<div class="ico" style="background:${hex(c.c)}"></div><div class="nm">${c.n}<small>Color for shirt, pants or cap</small></div><button class="buy ${owned?'owned':''}" ${(!owned&&acct.bits<c.p)?'disabled':''}>${owned?'Owned':c.p+' BB'}</button>`;
   d.querySelector('button').onclick=()=>{ if(owned) return; acct.bits-=c.p; acct.owned.add(i); fmtBits(); renderShop(); renderSwatches(); }; el.appendChild(d); }); }
@@ -625,6 +638,7 @@ function buildWorld(g){
   const coin=(x,y,z)=>{ const m=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.18,20),mat(0xffd23f)); m.rotation.x=Math.PI/2; m.position.set(x,y,z); m.castShadow=true; scene.add(m); coins.push({mesh:m,taken:false,base:y}); };
   const checkpoint=(x,y,z,i)=>{ block(x,y,z,6,1,6,0x3ad39a,{checkpoint:i}); const pole=new THREE.Mesh(new THREE.BoxGeometry(.3,4,.3),mat(0x1d2433)); pole.position.set(x+2.3,y+2.5,z-2.3); scene.add(pole);
     const flag=new THREE.Mesh(new THREE.BoxGeometry(1.6,1,.15),mat(0xff4b3a)); flag.position.set(x+1.4,y+4,z-2.3); scene.add(flag); checkpoints.push({pos:new THREE.Vector3(x,y+1.5,z),flag}); };
+  if(g.escape){ buildEscape(g,block,coin,checkpoint); return; }
   if(g.forest){ buildForest(g,block,coin,checkpoint); return; }
   if(g.arena){ buildArena(g,block,coin,checkpoint); return; }
   const R=rng(g.id.length*7919+g.stages*131), pal=[0xcfd6e3,0xb7c0d1,0xc98a4b,0x8c6cff];
@@ -647,6 +661,36 @@ function buildWorld(g){
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages};
   camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
+// ---------- Speed Escape (type answers to run) ----------
+let E=null;
+const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qIn=document.getElementById('qIn'), qInfo=document.getElementById('qInfo');
+function buildEscape(g,block,coin,checkpoint){
+  scene.background=new THREE.Color(0xffe3b0); scene.fog=new THREE.Fog(0xffe3b0,60,160);
+  const L=g.stages*30+40; block(0,-.5,-L/2+10,10,1,L,0xcfd6e3,{floor:true}); block(-6,1,-L/2+10,2,4,L,0xb7c0d1,{solid:true}); block(6,1,-L/2+10,2,4,L,0xb7c0d1,{solid:true});
+  checkpoint(0,0,0,0);
+  for(let i=1;i<=g.stages;i++){ const z=-i*30; block(-3.5,2,z,3,5,1,0x8c6cff,{solid:true}); block(3.5,2,z,3,5,1,0x8c6cff,{solid:true}); block(0,5.2,z,10,1.4,1,0x8c6cff,{solid:true}); if(i<g.stages) checkpoint(0,0,z-4,i); coin(0,1.2,z-12); }
+  const fz=-g.stages*30-12; block(0,-.5,fz,8,1,8,0xffd23f,{finish:true}); const fp=new THREE.Mesh(new THREE.BoxGeometry(.4,7,.4),mat(0x1d2433)); fp.position.set(0,3.5,fz-3.5); scene.add(fp);
+  const lava=new THREE.Mesh(new THREE.BoxGeometry(14,9,2),new THREE.MeshBasicMaterial({color:0xff4b3a})); lava.position.set(0,3,22); scene.add(lava);
+  const base=6+(acct.boost||0); E={speed:base,base,lavaZ:22,lavaSpeed:3.2,q:null,streak:0,correct:0,wrong:0,auto:true,t:0,best:0,over:false,lava};
+  totalCoins=coins.length; player=buildAvatar(); teamRing(player,0x3ad39a); scene.add(player);
+  P={pos:new THREE.Vector3(0,1.5,0),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
+  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages}; camYaw=0; camPitch=.5; hud(); newQuestion();
+}
+function newQuestion(){ const lvl=1+Math.floor(S.cp/2); const a=2+Math.floor(Math.random()*(6+lvl*2)), b=2+Math.floor(Math.random()*(6+lvl)); E.q={a,b,ans:a*b}; qText.textContent=`${a} × ${b} = ?`; qIn.value=''; qIn.className=''; if(matchMedia('(pointer:fine)').matches) qIn.focus(); escInfo(); }
+function escInfo(){ qInfo.innerHTML=`speed <b>${E.speed.toFixed(0)}</b> · streak ${E.streak} · lava ${Math.max(0,Math.round(E.lavaZ-P.pos.z))}m behind`; }
+function answer(){ if(!E||E.over||!E.q) return; const v=parseInt(qIn.value,10); if(isNaN(v)) return;
+  if(v===E.q.ans){ E.speed+=1; E.streak++; E.correct++; qIn.className='good'; toast('✅ +1 speed',''); if(E.streak%5===0){ acct.bits+=10; fmtBits(); toast('🔥 '+E.streak+' streak!','+10 Blockbux'); } setTimeout(newQuestion,250); }
+  else { E.speed=Math.max(E.base,E.speed-2); E.streak=0; E.wrong++; qIn.className='bad'; toast('❌ '+E.q.a+' × '+E.q.b+' = '+E.q.ans,'-2 speed'); setTimeout(newQuestion,700); }
+  escInfo(); }
+qIn.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') answer(); });
+qIn.addEventListener('keyup',e=>e.stopPropagation());
+qIn.addEventListener('input',()=>{ if(E&&E.q&&qIn.value.length>=String(E.q.ans).length&&parseInt(qIn.value,10)===E.q.ans) answer(); });
+function updateEscape(dt){ if(!E||E.over) return; E.t+=dt;
+  // auto-run forward at current speed; player can still steer left/right & jump
+  P.pos.z-=E.speed*dt; P.pos.x=Math.max(-4.3,Math.min(4.3,P.pos.x)); P.yaw=Math.PI; 
+  E.lavaSpeed=3.2+S.cp*.9; E.lavaZ-=E.lavaSpeed*dt; E.lava.position.z=E.lavaZ; E.lava.scale.y=1+Math.sin(E.t*6)*.05;
+  if(E.lavaZ<=P.pos.z+1){ E.over=true; S.done=true; qpanel.classList.remove('show'); const k='escape'; if(acct.best[k]===undefined||S.cp>acct.best[k]) acct.best[k]=S.cp; toast('🔥 The lava got you!',`reached stage ${S.cp+1} · ${E.correct} correct · speed ${E.speed.toFixed(0)}`,true); }
+  if(Math.floor(E.t*4)%2===0) escInfo(); }
 // ---------- Campfire Nights (survival) ----------
 const DAY_LEN=40, NIGHT_LEN=32; let NIGHTS_TO_WIN=7;
 const NIGHT_OPTS=[{n:7,name:'Camping trip',desc:'7 nights · gentle'},{n:20,name:'Long haul',desc:'20 nights · wolves show up'},{n:50,name:'Deep woods',desc:'50 nights · hard'},{n:99,name:'99 nights',desc:'The full ordeal'}];
@@ -1178,14 +1222,14 @@ const toastEl=document.getElementById('toast'); let toastT;
 function toast(big,small='',sticky=false){ toastEl.innerHTML=big+(small?`<small>${small}</small>`:'')+(sticky?'<br><button class="btn" onclick="leaveGame()">Back to games</button>':''); toastEl.classList.add('show'); clearTimeout(toastT); if(!sticky) toastT=setTimeout(()=>toastEl.classList.remove('show'),1600); }
 function hud(){ document.getElementById('pDeaths').innerHTML='<small>wipeouts</small>'+S.deaths; document.getElementById('pStage').innerHTML='<small>stage</small>'+(S.cp+1)+' / '+S.stages; document.getElementById('pCoins').innerHTML='<small>coins</small>'+S.coins+' / '+totalCoins; }
 function respawn(){ if(G&&G.forest){ P.pos.set(0,1.5,6); P.vel.set(0,0,0); A.hp=HP_MAX; return; } if(G&&G.arena&&A&&A.teams){ P.pos.copy(spawnPoint(A.myTeam,0,1)); P.pos.y=1.5; P.vel.set(0,0,0); P.standing=null; return; } const c=checkpoints[S.cp]; P.pos.copy(c.pos); P.vel.set(0,0,0); P.standing=null; }
-function die(){ if(G&&G.arena){ if(NET){ netSend({t:'hit',target:NET.me,dmg:9999,by:NET.me}); respawn(); return; } playerEliminated(); respawn(); return; } S.deaths++; acct.deaths++; hud(); toast('Wipeout!','back to stage '+(S.cp+1)); respawn(); }
+function die(){ if(G&&G.escape&&E){ E.speed=Math.max(E.base,E.speed-3); } if(G&&G.arena){ if(NET){ netSend({t:'hit',target:NET.me,dmg:9999,by:NET.me}); respawn(); return; } playerEliminated(); respawn(); return; } S.deaths++; acct.deaths++; hud(); toast('Wipeout!','back to stage '+(S.cp+1)); respawn(); }
 const clock=new THREE.Clock(); let running=false; const GRAV=-30; let JUMP=11.5; const tmpV=new THREE.Vector3();
 function update(dt){
   S.t+=dt;
   for(const p of platforms){ if(!p.moving) continue; const m=p.moving; p.base=p.base||p.mesh.position.clone(); const prev=p.mesh.position[m.axis]; p.mesh.position[m.axis]=p.base[m.axis]+Math.sin(S.t*m.speed+m.phase)*m.amp; p.delta=p.delta||new THREE.Vector3(); p.delta.set(0,0,0); p.delta[m.axis]=p.mesh.position[m.axis]-prev; }
   if(P.standing&&P.standing.delta) P.pos.add(P.standing.delta);
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
-  ix+=joy.x; iz+=joy.y; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
+  ix+=joy.x; iz+=joy.y; if(G.escape) iz=0; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)), right=new THREE.Vector3(-fwd.z,0,fwd.x);
   const move=fwd.multiplyScalar(-iz).add(right.multiplyScalar(ix));
   if((G.arena&&A&&A.meDead)||menuOpen){ move.set(0,0,0); }
@@ -1198,14 +1242,15 @@ function update(dt){
   for(const p of platforms){ if(fly) break; const m=p.mesh.position,s=p.size; if(Math.abs(P.pos.x-m.x)>=s.x/2+P.halfW*.6||Math.abs(P.pos.z-m.z)>=s.z/2+P.halfW*.6) continue; const top=m.y+s.y/2;
     if(P.vel.y<=0&&feet<=top+.05&&feet>=top-1.2){ if(p.lava){die();return;} if(p.solid&&s.y>3) continue; P.pos.y=top+1.1; P.vel.y=0; P.onGround=true; P.standing=p;
       if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); if(NET&&!G.arena) sendEv({k:'cp',stage:S.cp}); if(!G.arena) serverMsg(`<b>${acct.name}</b> reached stage ${S.cp+1}`); }
-      if(p.finish&&!S.done){ S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); serverMsg(`🏁 <b>${acct.name}</b> finished the obby!`); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast('You made it! 🏆',`+${50+bonus} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
+      if(p.finish&&!S.done){ if(G.escape){ qpanel.classList.remove('show'); E.over=true; acct.bits+=E.correct*2; } S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); serverMsg(`🏁 <b>${acct.name}</b> finished the obby!`); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast(G.escape?'Escaped! 🏆':'You made it! 🏆',`+${50+bonus}${G.escape?'+'+(E.correct*2):''} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
   if(!G.arena) for(const p of platforms){ if(p.lava||p.checkpoint!==undefined||p.finish) continue; const m=p.mesh.position,s=p.size; if(P.pos.y-1.1 < m.y+s.y/2-.3 && P.pos.y+2.3 > m.y-s.y/2) pushOut(P.pos,p); }
   if(P.pos.y<-12&&!fly) die();
-  if(G.arena) updateArena(dt); else remoteTick(dt);
+  if(G.arena) updateArena(dt); else { if(G.escape) updateEscape(dt); remoteTick(dt); }
   for(const c of coins){ if(c.taken) continue; c.mesh.rotation.z+=dt*3; c.mesh.position.y=c.base+Math.sin(S.t*3)*.15; if(c.mesh.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+1,P.pos.z))<1.5){ c.taken=true; scene.remove(c.mesh); S.coins++; acct.coins++; acct.bits+=5; fmtBits(); if(!G.arena) hud(); } }
   player.position.copy(P.pos); if(G.arena&&A&&A.dash&&A.dash.slide) player.position.y-=.9; player.rotation.y=P.yaw+Math.PI;
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
   if(G.arena&&firstPerson){ player.visible=false; const eye=new THREE.Vector3(P.pos.x,P.pos.y+2.6,P.pos.z); if(A&&A.dash&&A.dash.slide) eye.y-=.9; camera.position.copy(eye); const dir=new THREE.Vector3(-Math.sin(camYaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(camYaw)*Math.cos(fpPitch)); camera.lookAt(eye.clone().add(dir)); return; }
+  if(G.escape){ camYaw=0; }
   if(acct.follow&&look.id===null&&len>.05){ const target=Math.atan2(-move.x,-move.z); let d=target-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*2); }
   const dist=(G.arena&&scoped)?5:11, cx=P.pos.x+Math.sin(camYaw)*Math.cos(camPitch)*dist, cz=P.pos.z+Math.cos(camYaw)*Math.cos(camPitch)*dist, cy=P.pos.y+2+Math.sin(camPitch)*dist;
   camera.position.lerp(tmpV.set(cx,cy,cz),.25); camera.lookAt(P.pos.x,P.pos.y+2,P.pos.z);
@@ -1216,11 +1261,11 @@ addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 
-function startGame(g){ G=g; chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
+function startGame(g){ G=g; qpanel.classList.toggle('show',!!g.escape); chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
