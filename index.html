@@ -308,6 +308,17 @@
 
       </div>
       <div class="panel"><div class="lbl" style="font-weight:800;margin-bottom:4px">⚙️ Settings</div><div id="settingsBox"></div></div>
+      <div class="panel" id="ownerPanel" style="display:none;border-color:#b06a00">
+        <div class="lbl" style="font-weight:800">👑 Owner panel</div>
+        <div class="hint" id="ownStats">…</div>
+        <div class="modrow"><input id="ownUser" placeholder="username"><input id="ownAmt" type="number" placeholder="Blockbux (+/-)"><button class="buy" data-own="grant">Give Blockbux</button></div>
+        <div class="modrow"><select id="ownItem"></select><button class="buy" data-own="giveitem">Give item</button><select id="ownGear"></select><button class="buy" data-own="givegear">Give weapon</button></div>
+        <div class="modrow"><button class="buy" data-own="promote">Make admin</button><button class="buy owned" data-own="demote">Remove admin</button><input id="ownPw" placeholder="new password"><button class="buy owned" data-own="resetpw">Reset password</button><button class="buy" data-own="delete" style="background:var(--lava);color:#fff">Delete account</button></div>
+        <div class="modrow"><input id="ownText" placeholder="announcement / message of the day"><button class="buy" data-own="announce">Announce now</button><button class="buy owned" data-own="motd">Set MOTD</button></div>
+        <div class="hint" id="ownMsg"></div>
+        <div class="modrow"><input id="ownQ" placeholder="search accounts"><button class="buy owned" id="ownSearch">Search</button></div>
+        <div class="modlist" id="ownList">–</div>
+      </div>
       <div class="panel" id="modPanel" style="display:none">
         <div class="lbl" style="font-weight:800">🛡️ Moderation</div>
         <div class="modrow"><select id="modAction"><option value="ban">Ban</option><option value="unban">Unban</option><option value="mute">Mute</option><option value="unmute">Unmute</option><option value="kick">Kick</option></select><input id="modUser" placeholder="username"><input id="modMin" type="number" placeholder="minutes (0 = forever)" min="0"></div>
@@ -448,6 +459,13 @@ let authToken=null, signupMode=false, saveTimer=null, dirty=false;
 const store={ get:k=>{ try{ return localStorage.getItem(k); }catch{ return null; } }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch{} }, del:k=>{ try{ localStorage.removeItem(k); }catch{} } };
 let isAdminUser=false;
 function showMod(on){ isAdminUser=on; document.getElementById('modPanel').style.display=on?'block':'none'; if(on) refreshMod(); }
+function showOwner(on){ document.getElementById('ownerPanel').style.display=on?'block':'none'; if(!on) return; const it=document.getElementById('ownItem'); it.innerHTML=CATALOG.map(c=>`<option value="${c.id}">${c.emoji} ${c.name}</option>`).join(''); const gr=document.getElementById('ownGear'); gr.innerHTML=SLOTS.flatMap(k=>GEAR[k].map(w=>`<option value="${w.id}">${w.emoji} ${w.name}</option>`)).join(''); ownerDo('stats'); ownerSearch(); }
+async function ownerDo(action){ const body={token:authToken,action,user:document.getElementById('ownUser').value.trim(),amount:+document.getElementById('ownAmt').value||0,item:action==='givegear'?document.getElementById('ownGear').value:document.getElementById('ownItem').value,text:action==='resetpw'?document.getElementById('ownPw').value:document.getElementById('ownText').value.trim()};
+  if(action==='delete'&&!confirm(`Delete account "${body.user}"? This can't be undone.`)) return;
+  try{ const r=await fetch(SERVER_HTTP+'/owner',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); (action==='stats'?document.getElementById('ownStats'):document.getElementById('ownMsg')).textContent=d.msg||d.error; if(action!=='stats'){ ownerSearch(); ownerDo('stats'); } }catch(e){ document.getElementById('ownMsg').textContent=e.message; } }
+async function ownerSearch(){ try{ const r=await fetch(SERVER_HTTP+'/owner/users?token='+encodeURIComponent(authToken)+'&q='+encodeURIComponent(document.getElementById('ownQ').value.trim())); const d=await r.json(); if(d.error) throw new Error(d.error);
+  document.getElementById('ownList').innerHTML=d.users.length?d.users.map(u=>`<span style="cursor:pointer" onclick="document.getElementById('ownUser').value='${u.name}'">${u.admin?'🛡️ ':''}${u.banned?'⛔ ':''}<b style="color:var(--ink)">${u.name}</b></span> · ${u.bits} BB · ${u.wins} wins · ${u.items} items`).join('<br>'):'no accounts match'; }catch(e){ document.getElementById('ownList').textContent=e.message; } }
+document.querySelectorAll('[data-own]').forEach(b=>b.onclick=()=>ownerDo(b.dataset.own)); document.getElementById('ownSearch').onclick=ownerSearch;
 async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?token='+encodeURIComponent(authToken)); const d=await r.json(); if(d.error) throw new Error(d.error);
   document.getElementById('modOnline').innerHTML=d.online.length?d.online.map(o=>`${o.name} <span style="color:var(--muted)">(${o.room.split('|')[0]})</span>`).join('<br>'):'nobody online';
   document.getElementById('modReports').innerHTML=d.reports.length?d.reports.map(x=>`<b>${x.user}</b> reported by ${x.by}: ${x.reason||'(no reason)'} <span style="color:var(--muted)">${new Date(x.at).toLocaleString()}</span>`).join('<br>'):'no reports';
@@ -468,14 +486,14 @@ lgUser.addEventListener('input',()=>{ const p=nameProblem(lgUser.value); lgUser.
 async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=nameProblem(u); if(prob){ lgErr.textContent=prob; return; } if(p.length<4){ lgErr.textContent='Password must be at least 4 characters'; return; }
   if(!ONLINE_URL){ lgErr.textContent='Accounts need the online server'; return; } lgGo.disabled=true; lgErr.className='err ok'; lgErr.textContent=signupMode?'Creating account…':'Signing in…';
   try{ const r=await fetch(SERVER_HTTP+'/auth/'+(signupMode?'signup':'login'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({u,p})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
-    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
   catch(e){ lgErr.className='err'; lgErr.textContent=e.message==='Failed to fetch'?'Server is waking up — try again in a moment':e.message; }
   lgGo.disabled=false; }
 lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
 document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
 function hideLogin(){ document.getElementById('login').style.display='none'; }
 document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
-(async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); hideLogin(); }catch{ store.del('bv_token'); } })();
+(async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); }catch{ store.del('bv_token'); } })();
 // ---------- settings ----------
 const SETTINGS_DEF={mouseSens:1,touchSens:1,invertY:false,fov:60,firstPerson:true,follow:true,shadows:true,quality:'high',chat:true,feed:true,fps:false,shake:true};
 let SET={...SETTINGS_DEF};
