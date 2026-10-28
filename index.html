@@ -367,7 +367,7 @@
   <div id="joy"><div id="knob"></div></div>
   <button id="camBtn">📷 Follow</button>
   <div id="rounds"></div>
-  <div id="qpanel"><div class="q" id="qText">3 × 4 = ?</div><input id="qIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off"><div class="sp" id="qInfo">speed <b>6</b></div></div>
+  <div id="qpanel"><div class="q" id="qText">⚡ 6</div><div class="sp" id="qInfo">speed</div></div>
   <div id="fps">60 fps</div>
   <div id="menu"><div class="card" id="menuCard"></div></div>
   <div id="feed"></div>
@@ -443,7 +443,7 @@ const GAMES = [
   {id:'lava',  name:'Lava Rush',       emoji:'🌋', bg:'linear-gradient(135deg,#ff8c42,#ff4b3a)', desc:'Fast and hot · 9 stages', stages:9, speed:11, lava:2},
   {id:'sky',   name:'Sky Islands',     emoji:'☁️', bg:'linear-gradient(135deg,#c7e9ff,#8c6cff)', desc:'Long jumps · 6 stages', stages:6, speed:9.5, lava:0, gap:1.4, jump:12.5},
   {id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
-  {id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'Type the answers to run · +1 speed per correct · outrun the lava', stages:10, speed:6, lava:0, escape:true},
+  {id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
   {id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
   {id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
@@ -455,8 +455,8 @@ function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 // game grid
 const grid=document.getElementById('gameGrid');
 function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=document.createElement('button'); b.className='game';
-  const best=g.arena?undefined:(g.escape?acct.best['escape']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'stage '+(best+1):best+' wipeouts'}</div>`:''}</div>`;
-  b.onclick=()=>g.forest?pickNights(g):(g.arena?pickMap(g):startObby(g)); grid.appendChild(b);} }
+  const best=g.arena?undefined:(g.escape?acct.best['escape_world']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'world '+best+' · '+(acct.best['escape_wins']||0)+' wins':best+' wipeouts'}</div>`:''}</div>`;
+  b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?pickMap(g):startObby(g)); grid.appendChild(b);} }
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
@@ -661,36 +661,54 @@ function buildWorld(g){
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages};
   camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
-// ---------- Speed Escape (type answers to run) ----------
-let E=null;
-const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qIn=document.getElementById('qIn'), qInfo=document.getElementById('qInfo');
+// ---------- Speed Escape (worlds, keys, Blockbux, boss) ----------
+let E=null; let WORLD=1;
+const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qInfo=document.getElementById('qInfo');
+const WORLDS=[
+  {n:1,name:'Meadow Run',  sky:0xbfe9ff, floor:0x6fbf73, wall:0x3f8f55, boss:0xff8c42, lava:2.6, keys:5},
+  {n:2,name:'Desert Dash', sky:0xffe3b0, floor:0xe0c27a, wall:0xb98f4a, boss:0x8c6cff, lava:3.2, keys:6},
+  {n:3,name:'Frost Flats', sky:0xdff3ff, floor:0xdfe9f3, wall:0x9fc3dd, boss:0x1fa9b5, lava:3.8, keys:7},
+  {n:4,name:'Lava Line',   sky:0xffb08a, floor:0x3a3f52, wall:0x6b2a2a, boss:0xff4b3a, lava:4.4, keys:8},
+  {n:5,name:'Void Vault',  sky:0x1b1f3a, floor:0x2b2f6b, wall:0x8c6cff, boss:0xffd23f, lava:5.0, keys:9},
+];
+function worldUnlocked(n){ return n<=1+(acct.best['escape_world']||0); }
+function pickWorld(g){ sheet.innerHTML=`<h3>Speed Escape</h3><div class="sub">Choose a world — beat the boss to unlock the next</div><div id="wl"></div><button class="cancel" id="wlCancel">Cancel</button>`; const list=sheet.querySelector('#wl');
+  for(const w of WORLDS){ const un=worldUnlocked(w.n); const b=document.createElement('button'); b.className='pack'; b.disabled=!un; b.style.opacity=un?'1':'.55';
+    b.innerHTML=`<div style="width:56px;height:56px;border-radius:50%;border:4px solid ${'#'+w.boss.toString(16).padStart(6,'0')};background:radial-gradient(circle,#fff 0%,${'#'+w.sky.toString(16).padStart(6,'0')} 70%);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900">${un?w.n:'🔒'}</div><div class="amt">World ${w.n} · ${w.name}<small>${w.keys} keys · lava speed ${w.lava} · boss at the end</small>${acct.best['escape_w'+w.n]!==undefined?`<small style="color:#157a56">Best: ${acct.best['escape_w'+w.n]} wipeouts</small>`:''}</div><div class="price">${un?'Go':'Locked'}</div>`;
+    b.onclick=()=>{ if(!un) return; WORLD=w.n; closeModal(); startObby(g); }; list.appendChild(b); }
+  sheet.querySelector('#wlCancel').onclick=closeModal; modal.classList.add('show'); }
+function portal(x,y,z,col){ const r=new THREE.Mesh(new THREE.TorusGeometry(2.2,.35,12,32),mat(col)); r.position.set(x,y+2.4,z); scene.add(r); const inner=new THREE.Mesh(new THREE.CircleGeometry(1.9,24),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.35,side:THREE.DoubleSide})); inner.position.set(x,y+2.4,z); scene.add(inner); return r; }
 function buildEscape(g,block,coin,checkpoint){
-  scene.background=new THREE.Color(0xffe3b0); scene.fog=new THREE.Fog(0xffe3b0,60,160);
-  const L=g.stages*30+40; block(0,-.5,-L/2+10,10,1,L,0xcfd6e3,{floor:true}); block(-6,1,-L/2+10,2,4,L,0xb7c0d1,{solid:true}); block(6,1,-L/2+10,2,4,L,0xb7c0d1,{solid:true});
-  checkpoint(0,0,0,0);
-  for(let i=1;i<=g.stages;i++){ const z=-i*30; block(-3.5,2,z,3,5,1,0x8c6cff,{solid:true}); block(3.5,2,z,3,5,1,0x8c6cff,{solid:true}); block(0,5.2,z,10,1.4,1,0x8c6cff,{solid:true}); if(i<g.stages) checkpoint(0,0,z-4,i); coin(0,1.2,z-12); }
-  const fz=-g.stages*30-12; block(0,-.5,fz,8,1,8,0xffd23f,{finish:true}); const fp=new THREE.Mesh(new THREE.BoxGeometry(.4,7,.4),mat(0x1d2433)); fp.position.set(0,3.5,fz-3.5); scene.add(fp);
-  const lava=new THREE.Mesh(new THREE.BoxGeometry(14,9,2),new THREE.MeshBasicMaterial({color:0xff4b3a})); lava.position.set(0,3,22); scene.add(lava);
-  const base=6+(acct.boost||0); E={speed:base,base,lavaZ:22,lavaSpeed:3.2,q:null,streak:0,correct:0,wrong:0,auto:true,t:0,best:0,over:false,lava};
+  const W=WORLDS[WORLD-1]; scene.background=new THREE.Color(W.sky); scene.fog=new THREE.Fog(W.sky,60,170);
+  const L=g.stages*30+60; block(0,-.5,-L/2+15,20,1,L,W.floor,{floor:true}); block(-11,1,-L/2+15,2,4,L,W.wall,{solid:true}); block(11,1,-L/2+15,2,4,L,W.wall,{solid:true});
+  checkpoint(0,0,0,0); portal(0,0,8,0x3ad39a);
+  E={speed:6+(acct.boost||0),base:6+(acct.boost||0),lavaZ:24,lavaSpeed:W.lava,keys:0,keysNeeded:W.keys,keyMeshes:[],t:0,over:false,world:W,bossZ:0,gateOpen:false,bbGot:0};
+  const R=rng(WORLD*991);
+  for(let i=1;i<=g.stages;i++){ const z=-i*30; block(-7.5,2,z,5,5,1,W.wall,{solid:true}); block(7.5,2,z,5,5,1,W.wall,{solid:true}); block(0,5.2,z,20,1.4,1,W.wall,{solid:true}); checkpoint(0,0,z-4,i);
+    for(let k=0;k<3;k++){ const kx=(R()-.5)*16, kz=z+6+R()*18; if(k<2) coin(kx,1.2,kz); } // Blockbux coins
+    const kx=(R()-.5)*16, kz=z+12+R()*10; const key=new THREE.Group(); const kb=new THREE.Mesh(new THREE.BoxGeometry(.5,.9,.15),mat(0xffd23f)); const kt=new THREE.Mesh(new THREE.TorusGeometry(.35,.12,8,16),mat(0xffd23f)); kt.position.y=.7; key.add(kb,kt); key.position.set(kx,1.4,kz); scene.add(key); E.keyMeshes.push({m:key,got:false});
+    for(let o=0;o<2;o++){ const ox=(R()-.5)*14, oz=z+8+R()*14; block(ox,.6,oz,2+R()*2,1.2,1.5,W.wall,{solid:true}); } }
+  // boss room
+  const bz=-g.stages*30-30; E.bossZ=bz; block(0,-.5,bz,40,1,40,W.floor,{floor:true}); block(-21,2,bz,2,6,40,W.wall,{solid:true}); block(21,2,bz,2,6,40,W.wall,{solid:true}); block(0,2,bz-21,44,6,2,W.wall,{solid:true});
+  E.gate=block(0,2.5,bz+19,20,6,1,0xff4b3a,{solid:true}); E.gateLabel=null;
+  const boss=new THREE.Group(); const body=new THREE.Mesh(new THREE.BoxGeometry(6,6,6),mat(W.boss)); body.position.y=3; boss.add(body); const eye=new THREE.MeshBasicMaterial({color:0xffffff}); for(const x of [-1.4,1.4]){ const e=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,.3),eye); e.position.set(x,4,3.05); boss.add(e); const pu=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.2),mat(0x1d2433)); pu.position.set(x,4,3.25); boss.add(pu); } const mouth=new THREE.Mesh(new THREE.BoxGeometry(3,.6,.3),mat(0x1d2433)); mouth.position.set(0,2,3.05); boss.add(mouth);
+  boss.position.set(0,0,bz-2); scene.add(boss); E.boss=boss; E.bossDir=1; E.bossHp=3; E.bossStun=0;
+  const fz=bz-15; block(0,-.5,fz,8,1,8,0xffd23f,{finish:true}); E.exit=portal(0,0,fz-3,W.boss);
+  const lava=new THREE.Mesh(new THREE.BoxGeometry(24,10,2),new THREE.MeshBasicMaterial({color:0xff4b3a})); lava.position.set(0,3.5,E.lavaZ); scene.add(lava); E.lava=lava;
   totalCoins=coins.length; player=buildAvatar(); teamRing(player,0x3ad39a); scene.add(player);
   P={pos:new THREE.Vector3(0,1.5,0),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
-  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages}; camYaw=0; camPitch=.5; hud(); newQuestion();
-}
-function newQuestion(){ const lvl=1+Math.floor(S.cp/2); const a=2+Math.floor(Math.random()*(6+lvl*2)), b=2+Math.floor(Math.random()*(6+lvl)); E.q={a,b,ans:a*b}; qText.textContent=`${a} × ${b} = ?`; qIn.value=''; qIn.className=''; if(matchMedia('(pointer:fine)').matches) qIn.focus(); escInfo(); }
-function escInfo(){ qInfo.innerHTML=`speed <b>${E.speed.toFixed(0)}</b> · streak ${E.streak} · lava ${Math.max(0,Math.round(E.lavaZ-P.pos.z))}m behind`; }
-function answer(){ if(!E||E.over||!E.q) return; const v=parseInt(qIn.value,10); if(isNaN(v)) return;
-  if(v===E.q.ans){ E.speed+=1; E.streak++; E.correct++; qIn.className='good'; toast('✅ +1 speed',''); if(E.streak%5===0){ acct.bits+=10; fmtBits(); toast('🔥 '+E.streak+' streak!','+10 Blockbux'); } setTimeout(newQuestion,250); }
-  else { E.speed=Math.max(E.base,E.speed-2); E.streak=0; E.wrong++; qIn.className='bad'; toast('❌ '+E.q.a+' × '+E.q.b+' = '+E.q.ans,'-2 speed'); setTimeout(newQuestion,700); }
-  escInfo(); }
-qIn.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') answer(); });
-qIn.addEventListener('keyup',e=>e.stopPropagation());
-qIn.addEventListener('input',()=>{ if(E&&E.q&&qIn.value.length>=String(E.q.ans).length&&parseInt(qIn.value,10)===E.q.ans) answer(); });
-function updateEscape(dt){ if(!E||E.over) return; E.t+=dt;
-  // auto-run forward at current speed; player can still steer left/right & jump
-  P.pos.z-=E.speed*dt; P.pos.x=Math.max(-4.3,Math.min(4.3,P.pos.x)); P.yaw=Math.PI; 
-  E.lavaSpeed=3.2+S.cp*.9; E.lavaZ-=E.lavaSpeed*dt; E.lava.position.z=E.lavaZ; E.lava.scale.y=1+Math.sin(E.t*6)*.05;
-  if(E.lavaZ<=P.pos.z+1){ E.over=true; S.done=true; qpanel.classList.remove('show'); const k='escape'; if(acct.best[k]===undefined||S.cp>acct.best[k]) acct.best[k]=S.cp; toast('🔥 The lava got you!',`reached stage ${S.cp+1} · ${E.correct} correct · speed ${E.speed.toFixed(0)}`,true); }
-  if(Math.floor(E.t*4)%2===0) escInfo(); }
+  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages}; camYaw=0; camPitch=.5; hud(); escInfo(); toast(`World ${W.n} · ${W.name}`,`collect ${W.keys} keys to open the boss gate · keys = +1 speed`); }
+function escInfo(){ if(!E) return; qText.textContent=`⚡ ${E.speed.toFixed(0)}`; qInfo.innerHTML=`speed · 🔑 ${E.keys}/${E.keysNeeded} · 💰 ${E.bbGot} BB · lava ${Math.max(0,Math.round(E.lavaZ-P.pos.z))}m`; }
+function updateEscape(dt){ if(!E||E.over) return; E.t+=dt; G.speed=E.speed; P.pos.x=Math.max(-9.3,Math.min(9.3,P.pos.x)); if(P.pos.z<E.bossZ+19) P.pos.x=Math.max(-19.3,Math.min(19.3,P.pos.x));
+  // keys
+  for(const k of E.keyMeshes){ if(k.got) continue; k.m.rotation.y+=dt*2; k.m.position.y=1.4+Math.sin(E.t*3+k.m.position.x)*.15; if(k.m.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+.5,P.pos.z))<1.8){ k.got=true; scene.remove(k.m); E.keys++; E.speed+=1; toast('🔑 Key!','+1 speed'); if(E.keys>=E.keysNeeded&&!E.gateOpen){ E.gateOpen=true; scene.remove(E.gate.mesh); platforms.splice(platforms.indexOf(E.gate),1); toast('🚪 Boss gate open!','run!'); } } }
+  // lava chase (stops at boss room door)
+  if(E.lavaZ>E.bossZ+22){ E.lavaZ-=E.lavaSpeed*dt; E.lava.position.z=E.lavaZ; } E.lava.scale.y=1+Math.sin(E.t*6)*.05;
+  if(E.lavaZ<=P.pos.z+1&&!fly&&!god){ S.deaths++; acct.deaths++; E.speed=Math.max(E.base,E.speed-2); E.lavaZ=checkpoints[S.cp].pos.z+26; toast('🔥 Burned!','back to the checkpoint · -2 speed'); respawn(); }
+  // boss: paces across the room, charges when you are close
+  if(P.pos.z<E.bossZ+20){ const b=E.boss; if(E.bossStun>0){ E.bossStun-=dt; b.rotation.z=Math.sin(E.t*20)*.1; } else { b.rotation.z=0; const spd=4+E.world.n*1.2; b.position.x+=E.bossDir*spd*dt; if(Math.abs(b.position.x)>14) E.bossDir*=-1; const dz=P.pos.z-b.position.z; if(Math.abs(P.pos.x-b.position.x)<3&&dz>0&&dz<18){ b.position.z+=12*dt; } else if(b.position.z<E.bossZ-2) b.position.z+=2*dt; else if(b.position.z>E.bossZ-2) b.position.z-=2*dt; }
+    const d=Math.hypot(P.pos.x-b.position.x,P.pos.z-b.position.z); if(d<3.8&&!fly&&!god){ if(P.pos.y>5.5){ E.bossHp--; E.bossStun=1.5; P.vel.y=11; toast(E.bossHp>0?`💥 Boss hit! ${E.bossHp} left`:'💥 Boss down!'); if(E.bossHp<=0){ scene.remove(b); E.boss={position:new THREE.Vector3(0,-99,0),rotation:{z:0}}; acct.bits+=50; fmtBits(); toast('🏆 Boss defeated!','+50 Blockbux · go through the portal'); } } else { S.deaths++; acct.deaths++; toast('👊 The boss got you!','back to the checkpoint'); respawn(); } } }
+  E.exit.rotation.y+=dt; if(Math.floor(E.t*4)%2===0) escInfo(); }
 // ---------- Campfire Nights (survival) ----------
 const DAY_LEN=40, NIGHT_LEN=32; let NIGHTS_TO_WIN=7;
 const NIGHT_OPTS=[{n:7,name:'Camping trip',desc:'7 nights · gentle'},{n:20,name:'Long haul',desc:'20 nights · wolves show up'},{n:50,name:'Deep woods',desc:'50 nights · hard'},{n:99,name:'99 nights',desc:'The full ordeal'}];
@@ -1229,7 +1247,7 @@ function update(dt){
   for(const p of platforms){ if(!p.moving) continue; const m=p.moving; p.base=p.base||p.mesh.position.clone(); const prev=p.mesh.position[m.axis]; p.mesh.position[m.axis]=p.base[m.axis]+Math.sin(S.t*m.speed+m.phase)*m.amp; p.delta=p.delta||new THREE.Vector3(); p.delta.set(0,0,0); p.delta[m.axis]=p.mesh.position[m.axis]-prev; }
   if(P.standing&&P.standing.delta) P.pos.add(P.standing.delta);
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
-  ix+=joy.x; iz+=joy.y; if(G.escape) iz=0; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
+  ix+=joy.x; iz+=joy.y; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)), right=new THREE.Vector3(-fwd.z,0,fwd.x);
   const move=fwd.multiplyScalar(-iz).add(right.multiplyScalar(ix));
   if((G.arena&&A&&A.meDead)||menuOpen){ move.set(0,0,0); }
@@ -1242,15 +1260,14 @@ function update(dt){
   for(const p of platforms){ if(fly) break; const m=p.mesh.position,s=p.size; if(Math.abs(P.pos.x-m.x)>=s.x/2+P.halfW*.6||Math.abs(P.pos.z-m.z)>=s.z/2+P.halfW*.6) continue; const top=m.y+s.y/2;
     if(P.vel.y<=0&&feet<=top+.05&&feet>=top-1.2){ if(p.lava){die();return;} if(p.solid&&s.y>3) continue; P.pos.y=top+1.1; P.vel.y=0; P.onGround=true; P.standing=p;
       if(p.checkpoint!==undefined&&p.checkpoint>S.cp){ S.cp=p.checkpoint; hud(); toast('Checkpoint!','stage '+(S.cp+1)); checkpoints[S.cp].flag.material.color.set(0x3ad39a); if(NET&&!G.arena) sendEv({k:'cp',stage:S.cp}); if(!G.arena) serverMsg(`<b>${acct.name}</b> reached stage ${S.cp+1}`); }
-      if(p.finish&&!S.done){ if(G.escape){ qpanel.classList.remove('show'); E.over=true; acct.bits+=E.correct*2; } S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); serverMsg(`🏁 <b>${acct.name}</b> finished the obby!`); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast(G.escape?'Escaped! 🏆':'You made it! 🏆',`+${50+bonus}${G.escape?'+'+(E.correct*2):''} Blockbux · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
+      if(p.finish&&!S.done){ if(G.escape){ if(E.bossHp>0){ toast('Beat the boss first!','jump on its head 3 times'); P.pos.z+=4; return; } E.over=true; acct.best['escape_wins']=(acct.best['escape_wins']||0)+1; acct.best['escape_world']=Math.max(acct.best['escape_world']||0,WORLD); const bk='escape_w'+WORLD; if(acct.best[bk]===undefined||S.deaths<acct.best[bk]) acct.best[bk]=S.deaths; } S.done=true; const bonus=Math.max(0,30-S.deaths*5)+(NET&&REM.length&&!REM.some(r=>r.done)?25:0); if(NET) sendEv({k:'finish',coins:S.coins,deaths:S.deaths}); serverMsg(`🏁 <b>${acct.name}</b> finished the obby!`); acct.bits+=50+bonus; acct.wins++; if(acct.best[G.id]===undefined||S.deaths<acct.best[G.id]) acct.best[G.id]=S.deaths; fmtBits(); toast(G.escape?`World ${WORLD} cleared! 🏆`:'You made it! 🏆',`+${50+bonus} Blockbux${G.escape&&WORLD<5?' · World '+(WORLD+1)+' unlocked':''} · ${S.coins}/${totalCoins} coins · ${S.deaths} wipeouts`,true); } } }
   if(!G.arena) for(const p of platforms){ if(p.lava||p.checkpoint!==undefined||p.finish) continue; const m=p.mesh.position,s=p.size; if(P.pos.y-1.1 < m.y+s.y/2-.3 && P.pos.y+2.3 > m.y-s.y/2) pushOut(P.pos,p); }
   if(P.pos.y<-12&&!fly) die();
   if(G.arena) updateArena(dt); else { if(G.escape) updateEscape(dt); remoteTick(dt); }
-  for(const c of coins){ if(c.taken) continue; c.mesh.rotation.z+=dt*3; c.mesh.position.y=c.base+Math.sin(S.t*3)*.15; if(c.mesh.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+1,P.pos.z))<1.5){ c.taken=true; scene.remove(c.mesh); S.coins++; acct.coins++; acct.bits+=5; fmtBits(); if(!G.arena) hud(); } }
+  for(const c of coins){ if(c.taken) continue; c.mesh.rotation.z+=dt*3; c.mesh.position.y=c.base+Math.sin(S.t*3)*.15; if(c.mesh.position.distanceTo(tmpV.set(P.pos.x,P.pos.y+1,P.pos.z))<1.5){ c.taken=true; scene.remove(c.mesh); S.coins++; acct.coins++; acct.bits+=5; fmtBits(); if(G.escape&&E){ E.bbGot+=5; } if(!G.arena) hud(); } }
   player.position.copy(P.pos); if(G.arena&&A&&A.dash&&A.dash.slide) player.position.y-=.9; player.rotation.y=P.yaw+Math.PI;
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
   if(G.arena&&firstPerson){ player.visible=false; const eye=new THREE.Vector3(P.pos.x,P.pos.y+2.6,P.pos.z); if(A&&A.dash&&A.dash.slide) eye.y-=.9; camera.position.copy(eye); const dir=new THREE.Vector3(-Math.sin(camYaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(camYaw)*Math.cos(fpPitch)); camera.lookAt(eye.clone().add(dir)); return; }
-  if(G.escape){ camYaw=0; }
   if(acct.follow&&look.id===null&&len>.05){ const target=Math.atan2(-move.x,-move.z); let d=target-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*2); }
   const dist=(G.arena&&scoped)?5:11, cx=P.pos.x+Math.sin(camYaw)*Math.cos(camPitch)*dist, cz=P.pos.z+Math.cos(camYaw)*Math.cos(camPitch)*dist, cy=P.pos.y+2+Math.sin(camPitch)*dist;
   camera.position.lerp(tmpV.set(cx,cy,cz),.25); camera.lookAt(P.pos.x,P.pos.y+2,P.pos.z);
