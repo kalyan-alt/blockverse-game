@@ -1,7 +1,7 @@
-// Copies studio.html from the repo root into app/ and vendors three.js so the desktop app works offline.
+// Copies studio.html into app/ and vendors three.js so the desktop app works offline.
 const fs=require('fs'),path=require('path'),https=require('https');
 const app=path.join(__dirname,'app'); fs.mkdirSync(app,{recursive:true});
-let html=fs.readFileSync(path.join(__dirname,'..','studio.html'),'utf8');
+let html=fs.readFileSync(path.join(__dirname,'studio.html'),'utf8');
 html=html.replace(/<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js"><\/script>/,'<script src="three.min.js"></script>');
 fs.writeFileSync(path.join(app,'index.html'),html);
 const dest=path.join(app,'three.min.js');
