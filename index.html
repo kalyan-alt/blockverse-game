@@ -40,6 +40,13 @@
   #tabs button{flex:1;background:none;border:0;padding:10px 0 8px;font-size:12px;font-weight:700;color:var(--muted)}
   #tabs button span{display:block;font-size:22px}
   #tabs button.on{color:var(--ink)}
+  .studioRow{display:flex;gap:14px;align-items:flex-start}
+  .studioArt{width:84px;height:84px;flex:none;border:3px solid var(--ink);border-radius:14px;background:linear-gradient(135deg,#8fd3ff,#8c6cff);display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 4px 0 var(--ink)}
+  .dl{display:flex;flex-wrap:wrap;gap:8px}
+  .dl a{text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+  .dlbtn{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 12px;font-weight:800;font-size:13px;box-shadow:0 3px 0 var(--ink)}
+  .dlbtn small{color:var(--muted);font-weight:700;font-size:11px}
+  @media(max-width:480px){.studioRow{flex-direction:column}}
   .panel{background:var(--card);border:3px solid var(--ink);border-radius:14px;padding:14px;box-shadow:0 4px 0 var(--ink);margin-bottom:14px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e4e8f0}
   .row:last-child{border-bottom:0}
@@ -279,7 +286,26 @@
   <div id="screens">
     <section class="screen active" id="s-games">
       <h2>Pick a game</h2>
+      <div class="catbar"><input type="text" id="gameSearch" placeholder="Search games… try “lava”, “online”, “survival”, “boss”"></div>
+      <div class="cattabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button></div>
       <div class="grid" id="gameGrid"></div>
+      <div class="catbar" style="display:none" id="gameEmpty"><div class="lbl" style="color:var(--muted);font-weight:700">No games match that. Try another word.</div></div>
+      <h2 style="margin-top:22px">Blockverse Studio</h2>
+      <div class="panel" id="studioPanel">
+        <div class="studioRow">
+          <div class="studioArt">🧱</div>
+          <div style="flex:1">
+            <div style="font-weight:900;font-size:17px">Build your own worlds</div>
+            <div class="sub" style="margin:4px 0 10px">Place blocks, drop in ready-made buildings, paint, save and share. Runs in your browser, or download the desktop app.</div>
+            <div class="dl">
+              <a class="buy" href="studio.html">▶ Open in browser</a>
+              <a class="dlbtn" id="dlWin" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio-Setup.exe">⊞ Windows <small>.exe</small></a>
+              <a class="dlbtn" id="dlMac" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio.dmg"> Mac <small>.dmg</small></a>
+              <a class="dlbtn" id="dlLin" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio.AppImage">🐧 Linux <small>.AppImage</small></a>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
     <section class="screen" id="s-avatar">
       <h2>Your avatar</h2>
@@ -445,22 +471,26 @@ const acct = { name:'Player'+Math.floor(100+Math.random()*900), bits:40, coins:0
   owned:new Set([0,1,2,3]), shirt:0, pants:1, hat:2, follow:true, best:{}, boost:0, items:new Set(CATALOG.filter(c=>c.price===0).map(c=>c.id)), wear:{head:'cap',body:'shirt',legs:'pants'}, gear:new Set(['blaster','sidearm','bat','bomb']) };
 
 const GAMES = [
-  {id:'obby',  name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
-  {id:'lava',  name:'Lava Rush',       emoji:'🌋', bg:'linear-gradient(135deg,#ff8c42,#ff4b3a)', desc:'Fast and hot · 9 stages', stages:9, speed:11, lava:2},
-  {id:'sky',   name:'Sky Islands',     emoji:'☁️', bg:'linear-gradient(135deg,#c7e9ff,#8c6cff)', desc:'Long jumps · 6 stages', stages:6, speed:9.5, lava:0, gap:1.4, jump:12.5},
-  {id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
-  {id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
-  {id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
-  {id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
+  {tags:'obby online race platform jump', cats:'obby online', id:'obby', name:'Blockfall Obby',  emoji:'🏁', bg:'linear-gradient(135deg,#8fd3ff,#3ad39a)', desc:'7 stages · online race', stages:7, speed:9, lava:1},
+  {tags:'obby lava fast hot platform solo', cats:'obby solo', id:'lava', name:'Lava Rush',       emoji:'🌋', bg:'linear-gradient(135deg,#ff8c42,#ff4b3a)', desc:'Fast and hot · 9 stages', stages:9, speed:11, lava:2},
+  {tags:'obby sky islands long jumps solo', cats:'obby solo', id:'sky', name:'Sky Islands',     emoji:'☁️', bg:'linear-gradient(135deg,#c7e9ff,#8c6cff)', desc:'Long jumps · 6 stages', stages:6, speed:9.5, lava:0, gap:1.4, jump:12.5},
+  {tags:'obby tower climb spiral solo', cats:'obby solo', id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
+  {tags:'solo speed keys boss blockbux worlds run', cats:'solo', id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
+  {tags:'survival forest campfire craft wood stone food night wolves online', cats:'survival online', id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
+  {tags:'combat online shooter blaster team rounds bots pvp', cats:'combat online', id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
+document.getElementById('gameSearch').addEventListener('input',renderGrid);
+document.querySelectorAll('#gameTabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#gameTabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); gameCat=b.dataset.g; renderGrid(); });
 function fmtBits(){ markDirty(); document.getElementById('bitsTop').textContent=acct.bits; document.getElementById('bitsAcct').textContent=acct.bits; if(typeof renderShop==='function'&&document.getElementById('shopList')) renderShop(); if(typeof renderBoost==='function'&&document.getElementById('boostLvl')) renderBoost(); if(typeof renderCatalog==='function'&&document.getElementById('catGrid')) renderCatalog();
   document.getElementById('statCoins').textContent=acct.coins; document.getElementById('statWins').textContent=acct.wins; document.getElementById('statDeaths').textContent=acct.deaths; }
 function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 
 // game grid
 const grid=document.getElementById('gameGrid');
-function renderGrid(){ grid.innerHTML=''; for(const g of GAMES){ const b=document.createElement('button'); b.className='game';
+let gameCat='all';
+function gameMatches(g,q){ if(gameCat!=='all'&&!(g.cats||'').split(' ').includes(gameCat)) return false; if(!q) return true; return (g.name+' '+g.desc+' '+(g.tags||'')).toLowerCase().includes(q); }
+function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gameSearch')||{}).value||'').toLowerCase().trim(); const shown=GAMES.filter(g=>gameMatches(g,q)); document.getElementById('gameEmpty').style.display=shown.length?'none':''; for(const g of shown){ const b=document.createElement('button'); b.className='game';
   const best=g.arena?undefined:(g.escape?acct.best['escape_world']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'world '+best+' · '+(acct.best['escape_wins']||0)+' wins':best+' wipeouts'}</div>`:''}</div>`;
   b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);} }
 

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2433">
+<title>Blockverse Studio</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9Ijk2IiBmaWxsPSIjMWQyNDMzIi8+PHJlY3QgeD0iMTE2IiB5PSIyNzYiIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiByeD0iMTgiIGZpbGw9IiMzYWQzOWEiIHN0cm9rZT0iI2YzZjVmOSIgc3Ryb2tlLXdpZHRoPSIxNiIvPjxyZWN0IHg9IjI3NiIgeT0iMjc2IiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjE4IiBmaWxsPSIjZmY4YzQyIiBzdHJva2U9IiNmM2Y1ZjkiIHN0cm9rZS13aWR0aD0iMTYiLz48cmVjdCB4PSIxOTYiIHk9IjExNiIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIxOCIgZmlsbD0iIzhmZDNmZiIgc3Ryb2tlPSIjZjNmNWY5IiBzdHJva2Utd2lkdGg9IjE2Ii8+PC9zdmc+">
+<style>
+  :root{--ink:#1d2433;--bg:#f3f5f9;--card:#fff;--sky:#8fd3ff;--sun:#ffb039;--mint:#3ad39a;--lava:#ff4b3a;--coin:#ffd23f;--muted:#6b7385}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);font-family:"Trebuchet MS",Verdana,sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:none}
+  button{font:inherit;color:inherit;cursor:pointer}
+  #app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:1fr 250px;height:100%}
+  header{grid-column:1/3;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px}
+  header h1{font-size:18px;font-weight:900;letter-spacing:.3px}
+  header h1 span{color:var(--sky)}
+  header .sp{flex:1}
+  header input{font:inherit;font-weight:800;background:#2f3850;color:#fff;border:0;border-radius:999px;padding:6px 12px;width:180px;outline:0}
+  .hb{background:#2f3850;border:0;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px;color:#fff}
+  .hb.go{background:var(--sun);color:var(--ink)}
+  #view{position:relative;background:#8fd3ff}
+  canvas{display:block}
+  #hud{position:absolute;left:10px;bottom:10px;background:#ffffffd9;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:700;box-shadow:0 3px 0 var(--ink);pointer-events:none}
+  #toast{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--ink);color:#fff;border-radius:999px;padding:8px 14px;font-weight:800;font-size:13px;transition:transform .2s;pointer-events:none}
+  #toast.show{transform:translateX(-50%)}
+  aside{background:var(--card);border-left:3px solid var(--ink);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+  .panel{background:var(--bg);border:3px solid var(--ink);border-radius:14px;padding:10px;box-shadow:0 3px 0 var(--ink)}
+  .lbl{font-weight:900;font-size:13px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+  .lbl small{color:var(--muted);font-weight:700;font-size:11px}
+  .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .tools button,.pal button,.bld button{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 4px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
+  .tools button.on,.bld button.on{background:var(--sun)}
+  .tools button:active,.bld button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+  .tools .k{display:block;font-size:10px;color:var(--muted)}
+  .pal{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .pal button{aspect-ratio:1;padding:0;position:relative}
+  .pal button.on{outline:3px solid var(--sun);outline-offset:2px}
+  .pal button i{position:absolute;inset:0;border-radius:7px}
+  .pal button i.glass{background:repeating-linear-gradient(45deg,#cfefff 0 4px,#9fd9ff 4px 8px)}
+  .pal button i.lava{background:linear-gradient(135deg,#ff4b3a,#ffb039)}
+  .pal button i.glow{box-shadow:inset 0 0 10px #fff}
+  .bld{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .bld button{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .bld button b{font-size:22px}
+  .bld button small{color:var(--muted);font-size:10px;font-weight:700}
+  .row{display:flex;gap:6px}
+  .row button{flex:1;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:7px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
+  .row button.warn{background:#ffe4e1}
+  .row button.go{background:var(--mint)}
+  .rng{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}
+  .rng input{flex:1}
+  .help{font-size:11px;color:var(--muted);font-weight:700;line-height:1.5}
+  #mobileBar{display:none}
+  @media(max-width:760px){
+    #app{grid-template-columns:1fr;grid-template-rows:52px 1fr auto}
+    aside{border-left:0;border-top:3px solid var(--ink);max-height:38vh;flex-direction:row;flex-wrap:nowrap;overflow-x:auto}
+    aside .panel{min-width:230px;flex:none}
+    header input{width:110px}
+    #mobileBar{display:flex;position:absolute;right:10px;bottom:10px;gap:6px}
+    #mobileBar button{width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-size:18px;font-weight:900}
+    #mobileBar button.on{background:var(--sun)}
+  }
+  #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;color:#fff;font-weight:900;font-size:22px}
+  #drop.show{display:flex}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Block<span>verse</span> Studio</h1>
+    <input id="wname" value="My World" maxlength="24" spellcheck="false">
+    <div class="sp"></div>
+    <button class="hb" id="bNew">New</button>
+    <button class="hb" id="bOpen">Open</button>
+    <button class="hb" id="bSave">Save</button>
+    <button class="hb go" id="bExport">Export</button>
+  </header>
+  <div id="view">
+    <div id="hud">0 blocks</div>
+    <div id="toast"></div>
+    <div id="mobileBar"><button id="mBuild" class="on" title="Build">+</button><button id="mErase" title="Erase">−</button><button id="mPaint" title="Paint">🖌</button></div>
+    <div id="drop">Drop a .bvw world file to open it</div>
+  </div>
+  <aside>
+    <div class="panel">
+      <div class="lbl">Tools <small>1–4</small></div>
+      <div class="tools">
+        <button data-t="build" class="on">Build<span class="k">1 · L-click</span></button>
+        <button data-t="erase">Erase<span class="k">2 · R-click</span></button>
+        <button data-t="paint">Paint<span class="k">3</span></button>
+        <button data-t="pick">Pick<span class="k">4 · M-click</span></button>
+      </div>
+      <div class="rng" style="margin-top:10px">Brush <input type="range" id="brush" min="1" max="4" value="1"><b id="brushV">1</b></div>
+    </div>
+    <div class="panel">
+      <div class="lbl">Blocks <small>Q / E to cycle</small></div>
+      <div class="pal" id="pal"></div>
+    </div>
+    <div class="panel">
+      <div class="lbl">Buildings <small>click to stamp</small></div>
+      <div class="bld" id="bld"></div>
+      <div class="row" style="margin-top:8px"><button id="rotL">↺ Rotate</button><button id="rotR">↻ Rotate</button></div>
+    </div>
+    <div class="panel">
+      <div class="lbl">World</div>
+      <div class="rng">Ground <input type="range" id="gsize" min="16" max="96" step="8" value="48"><b id="gsizeV">48</b></div>
+      <div class="row" style="margin-top:8px"><button id="bUndo">↶ Undo</button><button id="bRedo">↷ Redo</button></div>
+      <div class="row" style="margin-top:6px"><button id="bShot">📷 Snapshot</button><button id="bClear" class="warn">Clear all</button></div>
+    </div>
+    <div class="panel">
+      <div class="lbl">Controls</div>
+      <div class="help">Drag to orbit · scroll to zoom · right-drag or WASD to pan · Shift+drag to pan<br>Ctrl+Z / Ctrl+Y undo & redo · Ctrl+S save · Esc cancels a building<br>Worlds save as <b>.bvw</b> files and in this browser.</div>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =============== PALETTE ===============
+const BLOCKS=[
+  {id:'grass',  name:'Grass',  c:0x3ad39a},
+  {id:'dirt',   name:'Dirt',   c:0x8b5a2b},
+  {id:'stone',  name:'Stone',  c:0x8d94a3},
+  {id:'cobble', name:'Cobble', c:0x6b7385},
+  {id:'wood',   name:'Wood',   c:0xc98b4a},
+  {id:'plank',  name:'Plank',  c:0xe6b36b},
+  {id:'brick',  name:'Brick',  c:0xc24b3a},
+  {id:'sand',   name:'Sand',   c:0xf3dd9d},
+  {id:'snow',   name:'Snow',   c:0xf3f5f9},
+  {id:'leaf',   name:'Leaves', c:0x2f8f4e},
+  {id:'water',  name:'Water',  c:0x4aa8ff, op:.65},
+  {id:'glass',  name:'Glass',  c:0xcfefff, op:.35},
+  {id:'lava',   name:'Lava',   c:0xff4b3a, glow:0xff8c42},
+  {id:'glow',   name:'Glow',   c:0xffd23f, glow:0xffd23f},
+  {id:'red',    name:'Red',    c:0xff4b3a},
+  {id:'orange', name:'Orange', c:0xff8c42},
+  {id:'yellow', name:'Yellow', c:0xffd23f},
+  {id:'green',  name:'Green',  c:0x3ad39a},
+  {id:'blue',   name:'Blue',   c:0x4aa8ff},
+  {id:'purple', name:'Purple', c:0x8c6cff},
+  {id:'pink',   name:'Pink',   c:0xff7ab8},
+  {id:'white',  name:'White',  c:0xffffff},
+  {id:'gray',   name:'Gray',   c:0x9aa3b2},
+  {id:'black',  name:'Black',  c:0x1d2433},
+];
+const BIDX=Object.fromEntries(BLOCKS.map((b,i)=>[b.id,i]));
+
+// =============== PREFAB BUILDINGS ===============
+// Each returns [[x,y,z,blockId],...] relative to origin (y up).
+function box(x0,y0,z0,x1,y1,z1,id,hollow){ const o=[]; for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++){ if(hollow&&x>x0&&x<x1&&z>z0&&z<z1&&y>y0&&y<y1) continue; o.push([x,y,z,id]); } return o; }
+function house(){ let o=box(0,0,0,6,0,6,'plank'); o=o.concat(box(0,1,0,6,3,6,'brick',true)); // walls
+  o=o.filter(b=>!(b[2]===0&&b[0]===3&&(b[1]===1||b[1]===2))); // door
+  for(const [x,z] of [[1,0],[5,0],[0,3],[6,3],[3,6]]) o=o.filter(b=>!(b[0]===x&&b[2]===z&&b[1]===2)), o.push([x,2,z,'glass']);
+  for(let i=0;i<=3;i++){ o=o.concat(box(-1+i,4+i,-1+i,7-i,4+i,7-i,'wood')); } o.push([5,8,5,'cobble'],[5,9,5,'cobble']); return o; }
+function tower(){ let o=[]; for(let y=0;y<12;y++){ const r=y<11?3:4; for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++){ const d=Math.hypot(x,z); if(d<=r+.5&&(d>r-1||y===0||y===11)) o.push([x,y,z,'cobble']); } }
+  for(let x=-4;x<=4;x+=2)for(let z=-4;z<=4;z+=2){ if(Math.hypot(x,z)>3.4&&Math.hypot(x,z)<4.6) o.push([x,12,z,'stone']); }
+  for(let y=2;y<11;y+=3) o.push([3,y,0,'glass'],[-3,y,0,'glass'],[0,y,3,'glass'],[0,y,-3,'glass']);
+  o=o.filter(b=>!(b[2]===-3&&b[0]===0&&(b[1]===1||b[1]===2))); return o; }
+function tree(){ let o=box(0,0,0,0,3,0,'wood'); o=o.concat(box(-2,3,-2,2,4,2,'leaf')); o=o.concat(box(-1,5,-1,1,5,1,'leaf')); o.push([0,6,0,'leaf']); return o.filter(b=>!(b[3]==='leaf'&&b[0]===0&&b[2]===0&&b[1]<4)); }
+function wall(){ let o=box(0,0,0,9,2,0,'cobble'); for(let x=0;x<=9;x+=2) o.push([x,3,0,'cobble']); return o; }
+function bridge(){ let o=box(0,0,0,11,0,2,'plank'); for(let x=0;x<=11;x+=1){ o.push([x,1,0,'wood'],[x,1,2,'wood']); if(x%3===0) o.push([x,2,0,'wood'],[x,2,2,'wood']); } return o; }
+function pool(){ let o=box(-3,0,-3,3,0,3,'stone'); o=o.concat(box(-3,1,-3,3,1,3,'stone',true)); o=o.concat(box(-2,1,-2,2,1,2,'water')); return o.filter((b,i,a)=>a.findIndex(c=>c[0]===b[0]&&c[1]===b[1]&&c[2]===b[2])===i); }
+function campfire(){ return [[0,0,0,'cobble'],[1,0,0,'cobble'],[-1,0,0,'cobble'],[0,0,1,'cobble'],[0,0,-1,'cobble'],[0,1,0,'lava'],[0,2,0,'glow']]; }
+function castle(){ let o=box(0,0,0,14,0,14,'cobble'); o=o.concat(box(0,1,0,14,4,14,'stone',true)); for(let x=0;x<=14;x+=2)for(let z of [0,14]) o.push([x,5,z,'stone']); for(let z=0;z<=14;z+=2)for(let x of [0,14]) o.push([x,5,z,'stone']);
+  for(const [cx,cz] of [[0,0],[14,0],[0,14],[14,14]]){ o=o.concat(box(cx-1,0,cz-1,cx+1,7,cz+1,'cobble',true)); for(let x=cx-1;x<=cx+1;x+=2)for(let z=cz-1;z<=cz+1;z+=2) o.push([x,8,z,'cobble']); }
+  o=o.filter(b=>!(b[2]===0&&(b[0]===7||b[0]===6||b[0]===8)&&b[1]>=1&&b[1]<=3)); o.push([7,4,0,'wood'],[6,4,0,'wood'],[8,4,0,'wood']);
+  o=o.concat(box(5,1,5,9,3,9,'plank',true)); o=o.concat(box(4,4,4,10,4,10,'wood')); o.push([7,5,7,'red'],[7,6,7,'red'],[7,7,7,'red']); return o; }
+function pyramid(){ let o=[]; for(let y=0;y<7;y++){ const r=6-y; o=o.concat(box(-r,y,-r,r,y,r,'sand',y<6)); } return o; }
+function obby(){ let o=[]; const ids=['green','yellow','orange','red','purple','blue']; for(let i=0;i<6;i++){ o=o.concat(box(i*3,i,0,i*3+1,i,1,ids[i])); } o=o.concat(box(18,6,0,20,6,2,'glow')); return o; }
+function shop(){ let o=box(0,0,0,8,0,5,'plank'); o=o.concat(box(0,1,0,8,3,5,'white',true)); o=o.filter(b=>!(b[2]===0&&b[1]>=1&&b[1]<=2&&b[0]>=1&&b[0]<=7)); for(let x=1;x<=7;x++) o.push([x,2,0,'glass']); o=o.filter(b=>!(b[0]===4&&b[2]===0&&b[1]===1)); o=o.filter(b=>!(b[0]===4&&b[2]===0&&b[1]===2)); o.push([4,2,0,'glass']);
+  for(let x=-1;x<=9;x++) o.push([x,4,-1,(x%2?'red':'white')],[x,4,0,(x%2?'red':'white')]); o=o.concat(box(0,4,1,8,4,5,'gray')); return o; }
+const BUILDINGS=[
+  {id:'house',   name:'House',    e:'🏠', f:house},
+  {id:'shop',    name:'Shop',     e:'🏪', f:shop},
+  {id:'tower',   name:'Tower',    e:'🗼', f:tower},
+  {id:'castle',  name:'Castle',   e:'🏰', f:castle},
+  {id:'pyramid', name:'Pyramid',  e:'🔺', f:pyramid},
+  {id:'tree',    name:'Tree',     e:'🌳', f:tree},
+  {id:'wall',    name:'Wall',     e:'🧱', f:wall},
+  {id:'bridge',  name:'Bridge',   e:'🌉', f:bridge},
+  {id:'pool',    name:'Pool',     e:'💧', f:pool},
+  {id:'fire',    name:'Campfire', e:'🔥', f:campfire},
+  {id:'obby',    name:'Obby run', e:'🏁', f:obby},
+];
+
+// =============== STATE ===============
+const world=new Map(); // "x,y,z" -> blockIndex
+const key=(x,y,z)=>x+','+y+','+z;
+let tool='build', cur=BIDX.grass, brush=1, ground=48, dirty=false;
+let stamp=null, stampRot=0; // active building
+const undoStack=[], redoStack=[]; let pending=null;
+const $=id=>document.getElementById(id);
+
+// =============== THREE ===============
+const view=$('view');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=true; view.prepend(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8fd3ff); scene.fog=new THREE.Fog(0x8fd3ff,80,200);
+const camera=new THREE.PerspectiveCamera(55,1,.1,500);
+const orbit={yaw:.8,pitch:.6,dist:40,target:new THREE.Vector3(0,2,0)};
+scene.add(new THREE.HemisphereLight(0xffffff,0x7a8aa8,.9));
+const sun=new THREE.DirectionalLight(0xfff2cc,.9); sun.position.set(30,60,20); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); const sc=sun.shadow.camera; sc.left=sc.bottom=-70; sc.right=sc.top=70; sc.far=200; scene.add(sun);
+
+let groundMesh, gridHelper;
+function buildGround(){ if(groundMesh){ scene.remove(groundMesh); scene.remove(gridHelper); }
+  groundMesh=new THREE.Mesh(new THREE.BoxGeometry(ground,1,ground),new THREE.MeshLambertMaterial({color:0x5cc88d})); groundMesh.position.set(0,-.5,0); groundMesh.receiveShadow=true; groundMesh.userData.ground=true; scene.add(groundMesh);
+  gridHelper=new THREE.GridHelper(ground,ground,0x2a9a68,0x3fb67e); gridHelper.position.y=.01; gridHelper.material.opacity=.45; gridHelper.material.transparent=true; scene.add(gridHelper); }
+buildGround();
+
+const geo=new THREE.BoxGeometry(1,1,1);
+const mats=BLOCKS.map(b=>new THREE.MeshLambertMaterial({color:b.c,transparent:!!b.op,opacity:b.op||1,emissive:b.glow||0x000000,emissiveIntensity:b.glow?.7:0}));
+const meshes=new Map(); const blocksGroup=new THREE.Group(); scene.add(blocksGroup);
+function addMesh(x,y,z,bi){ const m=new THREE.Mesh(geo,mats[bi]); m.position.set(x+.5,y+.5,z+.5); m.castShadow=!BLOCKS[bi].op; m.receiveShadow=true; m.userData.k=key(x,y,z); blocksGroup.add(m); meshes.set(m.userData.k,m); }
+function setBlock(x,y,z,bi,record=true){ const k=key(x,y,z); const prev=world.has(k)?world.get(k):null; if(prev===bi) return; if(y<0||y>128||Math.abs(x)>200||Math.abs(z)>200) return;
+  if(record&&pending) pending.push([x,y,z,prev,bi]);
+  if(meshes.has(k)){ blocksGroup.remove(meshes.get(k)); meshes.delete(k); }
+  if(bi===null){ world.delete(k); } else { world.set(k,bi); addMesh(x,y,z,bi); } dirty=true; }
+function begin(){ pending=[]; } function commit(){ if(pending&&pending.length){ undoStack.push(pending); if(undoStack.length>200) undoStack.shift(); redoStack.length=0; } pending=null; hud(); }
+function undo(){ const a=undoStack.pop(); if(!a) return; for(let i=a.length-1;i>=0;i--){ const [x,y,z,p]=a[i]; setBlock(x,y,z,p,false); } redoStack.push(a); hud(); toast('Undo'); }
+function redo(){ const a=redoStack.pop(); if(!a) return; for(const [x,y,z,,n] of a) setBlock(x,y,z,n,false); undoStack.push(a); hud(); toast('Redo'); }
+
+// ghost / stamp preview
+const ghostMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.45,depthWrite:false});
+const ghost=new THREE.Mesh(geo,ghostMat); ghost.visible=false; scene.add(ghost);
+const stampGroup=new THREE.Group(); scene.add(stampGroup);
+function rot(x,z,r){ for(let i=0;i<r;i++){ [x,z]=[-z,x]; } return [x,z]; }
+function stampBlocks(){ if(!stamp) return []; return stamp.blocks.map(([x,y,z,id])=>{ const [rx,rz]=rot(x,z,stampRot); return [rx,y,rz,BIDX[id]]; }); }
+function showStamp(ox,oy,oz){ stampGroup.clear(); stampGroup.position.set(ox,oy,oz); for(const [x,y,z,bi] of stampBlocks()){ const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:BLOCKS[bi].c,transparent:true,opacity:.55,depthWrite:false})); m.position.set(x+.5,y+.5,z+.5); stampGroup.add(m); } stampGroup.visible=true; }
+
+// =============== RAYCAST ===============
+const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2();
+function hit(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ptr.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); const hs=ray.intersectObjects([groundMesh,...blocksGroup.children]); return hs[0]||null; }
+function cellFromHit(h,adjacent){ const n=h.face.normal.clone(); if(h.object.userData.ground){ const p=h.point; return [Math.floor(p.x),0,Math.floor(p.z)]; } const p=h.object.position.clone().subScalar(.5); if(adjacent) p.add(n); return [Math.round(p.x),Math.round(p.y),Math.round(p.z)]; }
+function applyTool(h,t){ if(!h) return; if(t==='pick'){ if(h.object.userData.ground) return; cur=world.get(h.object.userData.k); renderPal(); return; }
+  if(t==='build'){ if(h.object.userData.ground&&h.face.normal.y<=0) return; const [x,y,z]=cellFromHit(h,true); brushAt(x,y,z,(bx,by,bz)=>{ if(by>=0) setBlock(bx,by,bz,cur); }); }
+  else if(t==='erase'){ if(h.object.userData.ground) return; const [x,y,z]=cellFromHit(h,false); brushAt(x,y,z,(bx,by,bz)=>setBlock(bx,by,bz,null)); }
+  else if(t==='paint'){ if(h.object.userData.ground) return; const [x,y,z]=cellFromHit(h,false); brushAt(x,y,z,(bx,by,bz)=>{ if(world.has(key(bx,by,bz))) setBlock(bx,by,bz,cur); }); } }
+function brushAt(x,y,z,fn){ const r=brush-1; for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++)for(let dz=-r;dz<=r;dz++) fn(x+dx,y+dy,z+dz); }
+
+// =============== INPUT ===============
+const cv=renderer.domElement; let drag=null, moved=false, touchDist=0;
+const keys={};
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); moved=false; drag={x:e.clientX,y:e.clientY,b:e.button,shift:e.shiftKey,t:performance.now(),touch:e.pointerType==='touch'}; });
+cv.addEventListener('pointermove',e=>{ if(drag){ const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.hypot(dx,dy)>4) moved=true;
+    if(drag.b===2||drag.shift){ const s=orbit.dist*.0016; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw)); orbit.target.addScaledVector(right,-dx*s).addScaledVector(fwd,-dy*s); }
+    else { orbit.yaw-=dx*.006; orbit.pitch=Math.max(.05,Math.min(1.5,orbit.pitch+dy*.006)); }
+    drag.x=e.clientX; drag.y=e.clientY; }
+  const h=hit(e.clientX,e.clientY); hover(h); });
+cv.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; if(moved) return; const h=hit(e.clientX,e.clientY);
+  if(stamp){ if(h){ const [x,y,z]=cellFromHit(h,true); const oy=h.object.userData.ground?0:y; begin(); for(const [bx,by,bz,bi] of stampBlocks()) setBlock(x+bx,oy+by,z+bz,bi); commit(); toast(stamp.name+' placed'); } if(!e.shiftKey){ stamp=null; stampGroup.visible=false; renderBld(); } return; }
+  let t=tool; if(d.b===2) t='erase'; else if(d.b===1) t='pick'; begin(); applyTool(h,t); commit(); });
+cv.addEventListener('wheel',e=>{ e.preventDefault(); orbit.dist=Math.max(6,Math.min(160,orbit.dist*(1+Math.sign(e.deltaY)*.1))); },{passive:false});
+// pinch
+cv.addEventListener('touchmove',e=>{ if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); if(touchDist) orbit.dist=Math.max(6,Math.min(160,orbit.dist*(touchDist/d))); touchDist=d; drag=null; } },{passive:true});
+cv.addEventListener('touchend',()=>{ touchDist=0; });
+function hover(h){ if(stamp){ ghost.visible=false; if(h){ const [x,y,z]=cellFromHit(h,true); showStamp(x,h.object.userData.ground?0:y,z); } else stampGroup.visible=false; return; }
+  if(!h||(tool!=='build'&&h.object.userData.ground)){ ghost.visible=false; return; } const [x,y,z]=cellFromHit(h,tool==='build'); ghost.position.set(x+.5,y+.5,z+.5); ghost.scale.setScalar(brush*2-1); ghostMat.color.set(tool==='erase'?0xff4b3a:tool==='paint'?BLOCKS[cur].c:BLOCKS[cur].c); ghost.visible=true; }
+
+addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return; keys[e.code]=true; const k=e.key.toLowerCase();
+  if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; } if((e.ctrlKey||e.metaKey)&&k==='y'){ e.preventDefault(); redo(); return; } if((e.ctrlKey||e.metaKey)&&k==='s'){ e.preventDefault(); save(); return; }
+  if(k==='1') setTool('build'); if(k==='2') setTool('erase'); if(k==='3') setTool('paint'); if(k==='4') setTool('pick');
+  if(k==='q'){ cur=(cur+BLOCKS.length-1)%BLOCKS.length; renderPal(); } if(k==='e'){ cur=(cur+1)%BLOCKS.length; renderPal(); }
+  if(k==='r'&&stamp){ stampRot=(stampRot+1)%4; } if(k==='escape'&&stamp){ stamp=null; stampGroup.visible=false; renderBld(); } });
+addEventListener('keyup',e=>{ keys[e.code]=false; });
+function setTool(t){ tool=t; document.querySelectorAll('.tools button').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); document.querySelectorAll('#mobileBar button').forEach(b=>b.classList.toggle('on',b.id==='m'+t[0].toUpperCase()+t.slice(1))); }
+document.querySelectorAll('.tools button').forEach(b=>b.onclick=()=>{ stamp=null; stampGroup.visible=false; renderBld(); setTool(b.dataset.t); });
+$('mBuild').onclick=()=>setTool('build'); $('mErase').onclick=()=>setTool('erase'); $('mPaint').onclick=()=>setTool('paint');
+$('brush').oninput=e=>{ brush=+e.target.value; $('brushV').textContent=brush; };
+$('gsize').oninput=e=>{ ground=+e.target.value; $('gsizeV').textContent=ground; buildGround(); dirty=true; };
+$('rotL').onclick=()=>{ stampRot=(stampRot+3)%4; }; $('rotR').onclick=()=>{ stampRot=(stampRot+1)%4; };
+
+// =============== UI RENDER ===============
+function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); }; el.appendChild(btn); }); }
+function renderBld(){ const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast('Click the ground to place · R rotates · Shift keeps stamping'); } renderBld(); }; el.appendChild(btn); }); }
+function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
+let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
+
+// =============== SAVE / LOAD ===============
+function serialize(){ const blocks=[]; for(const [k,bi] of world){ const [x,y,z]=k.split(',').map(Number); blocks.push([x,y,z,BLOCKS[bi].id]); } return {format:'blockverse-world',version:1,name:$('wname').value.trim()||'My World',ground,blocks,created:Date.now()}; }
+function load(data){ if(!data||data.format!=='blockverse-world'||!Array.isArray(data.blocks)) throw new Error('Not a Blockverse world'); clearWorld(false); $('wname').value=data.name||'My World'; ground=data.ground||48; $('gsize').value=ground; $('gsizeV').textContent=ground; buildGround(); for(const [x,y,z,id] of data.blocks){ if(id in BIDX) setBlock(x,y,z,BIDX[id],false); } dirty=false; undoStack.length=redoStack.length=0; hud(); toast('Opened '+(data.name||'world')); }
+function clearWorld(record=true){ if(record) begin(); for(const k of [...world.keys()]){ const [x,y,z]=k.split(',').map(Number); setBlock(x,y,z,null,record); } if(record) commit(); hud(); }
+function download(name,blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function save(){ const d=serialize(); const fname=d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world'; try{ localStorage.setItem('bvstudio:last',JSON.stringify(d)); }catch{} if(window.studio){ window.studio.saveAs(fname+'.bvw',JSON.stringify(d)).then(ok=>{ if(ok){ dirty=false; hud(); toast('Saved'); } }); return; } download(fname+'.bvw',new Blob([JSON.stringify(d)],{type:'application/json'})); dirty=false; hud(); toast('Saved '+fname+'.bvw'); }
+$('bSave').onclick=save;
+$('bOpen').onclick=()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>load(JSON.parse(t))).catch(e=>toast('Could not open: '+e.message)); }; i.click(); };
+$('bNew').onclick=()=>{ if(world.size&&!confirm('Start a new world? Unsaved changes will be lost.')) return; clearWorld(false); $('wname').value='My World'; dirty=false; undoStack.length=redoStack.length=0; hud(); };
+$('bClear').onclick=()=>{ if(world.size&&confirm('Remove every block?')) clearWorld(true); };
+$('bUndo').onclick=undo; $('bRedo').onclick=redo;
+$('bShot').onclick=()=>{ renderer.render(scene,camera); renderer.domElement.toBlob(b=>download(($('wname').value||'world')+'.png',b)); toast('Snapshot saved'); };
+$('bExport').onclick=()=>{ const d=serialize(); // Export as a Blockverse game map: JS object literal that index.html's buildWorld can consume later
+  const js=`// Blockverse map export — ${d.name}\n// Drop into Blockverse's WORLDS/MAPS list or load with Studio.\nexport default ${JSON.stringify({name:d.name,ground:d.ground,blocks:d.blocks})};\n`; download((d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world')+'.map.js',new Blob([js],{type:'text/javascript'})); toast('Exported map'); };
+// drag & drop
+view.addEventListener('dragover',e=>{ e.preventDefault(); $('drop').classList.add('show'); }); view.addEventListener('dragleave',()=>$('drop').classList.remove('show'));
+view.addEventListener('drop',e=>{ e.preventDefault(); $('drop').classList.remove('show'); const f=e.dataTransfer.files[0]; if(f) f.text().then(t=>load(JSON.parse(t))).catch(e=>toast('Could not open: '+e.message)); });
+// autosave to browser every 15s
+setInterval(()=>{ if(dirty&&world.size){ try{ localStorage.setItem('bvstudio:auto',JSON.stringify(serialize())); }catch{} } },15000);
+addEventListener('beforeunload',e=>{ if(dirty&&world.size){ e.preventDefault(); e.returnValue=''; } });
+// desktop app bridge (Electron preload exposes window.studio)
+if(window.studio){ window.studio.onOpen(d=>{ try{ load(JSON.parse(d)); }catch(e){ toast(e.message); } }); window.studio.onSave(()=>save()); }
+
+// =============== STARTER SCENE ===============
+function starter(){ for(const [x,y,z,id] of tree()) setBlock(x-10,y,z-8,BIDX[id],false); for(const [x,y,z,id] of house()) setBlock(x+2,y,z-4,BIDX[id],false); for(const [x,y,z,id] of campfire()) setBlock(x-6,y,z+6,BIDX[id],false); dirty=false; }
+try{ const a=localStorage.getItem('bvstudio:auto'); if(a&&confirm('Restore your last unsaved world?')) load(JSON.parse(a)); else starter(); }catch{ starter(); }
+
+// =============== LOOP ===============
+function resize(){ const w=view.clientWidth,h=view.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } addEventListener('resize',resize); resize();
+let last=performance.now();
+function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last)/1000); last=now;
+  const sp=orbit.dist*.6*dt; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw));
+  if(keys.KeyW) orbit.target.addScaledVector(fwd,sp); if(keys.KeyS) orbit.target.addScaledVector(fwd,-sp); if(keys.KeyA) orbit.target.addScaledVector(right,-sp); if(keys.KeyD) orbit.target.addScaledVector(right,sp);
+  const cp=Math.cos(orbit.pitch); camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*cp*orbit.dist, orbit.target.y+Math.sin(orbit.pitch)*orbit.dist, orbit.target.z+Math.cos(orbit.yaw)*cp*orbit.dist); camera.lookAt(orbit.target);
+  renderer.render(scene,camera); }
+renderPal(); renderBld(); setTool('build'); hud(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
