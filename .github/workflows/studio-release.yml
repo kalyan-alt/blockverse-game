@@ -1,9 +1,33 @@
-// Copies studio.html into app/ and vendors three.js so the desktop app works offline.
-const fs=require('fs'),path=require('path'),https=require('https');
-const app=path.join(__dirname,'app'); fs.mkdirSync(app,{recursive:true});
-let html=fs.readFileSync(path.join(__dirname,'studio.html'),'utf8');
-html=html.replace(/<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js"><\/script>/,'<script src="three.min.js"></script>');
-fs.writeFileSync(path.join(app,'index.html'),html);
-const dest=path.join(app,'three.min.js');
-if(fs.existsSync(dest)){ console.log('three.min.js already vendored'); process.exit(0); }
-https.get('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',r=>{ const w=fs.createWriteStream(dest); r.pipe(w); w.on('finish',()=>console.log('vendored three.min.js')); }).on('error',e=>{ console.error('download failed',e.message); process.exit(1); });
+name: Build Blockverse Studio
+on:
+  push:
+    tags: ['studio-v*', 'v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+          - os: macos-latest
+            script: dist:mac
+          - os: ubuntu-latest
+            script: dist:linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+      - run: npm run ${{ matrix.script }}
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: "false" }
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/Blockverse-Studio-Setup.exe
+            dist/Blockverse-Studio.dmg
+            dist/Blockverse-Studio.AppImage
