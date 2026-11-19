@@ -2,7 +2,7 @@
   "name": "blockverse-studio",
   "productName": "Blockverse Studio",
   "version": "1.0.0",
-  "description": "Build worlds for Blockverse — blocks, buildings, save and share.",
+  "description": "Build worlds for Blockverse \u2014 blocks, buildings, save and share.",
   "main": "main.js",
   "author": "Blockverse",
   "license": "MIT",
@@ -10,10 +10,9 @@
   "scripts": {
     "start": "electron .",
     "prepare-app": "node copy-app.js",
-    "dist": "npm run prepare-app && electron-builder",
-    "dist:win": "npm run prepare-app && electron-builder --win",
-    "dist:mac": "npm run prepare-app && electron-builder --mac",
-    "dist:linux": "npm run prepare-app && electron-builder --linux"
+    "dist:win": "npm run prepare-app && electron-builder --win --publish never",
+    "dist:mac": "npm run prepare-app && electron-builder --mac --publish never",
+    "dist:linux": "npm run prepare-app && electron-builder --linux --publish never"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -22,13 +21,60 @@
   "build": {
     "appId": "com.blockverse.studio",
     "productName": "Blockverse Studio",
-    "artifactName": "Blockverse-Studio${ext}",
-    "files": ["main.js", "preload.js", "app/**/*", "build/icon.png"],
-    "directories": { "output": "dist", "buildResources": "build" },
-    "fileAssociations": [{ "ext": "bvw", "name": "Blockverse World", "role": "Editor" }],
-    "win":   { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.png" },
-    "nsis":  { "oneClick": false, "allowToChangeInstallationDirectory": true, "artifactName": "Blockverse-Studio-Setup.exe" },
-    "mac":   { "target": [{ "target": "dmg", "arch": ["universal"] }], "category": "public.app-category.games", "icon": "build/icon.png", "hardenedRuntime": false, "identity": null },
-    "linux": { "target": [{ "target": "AppImage", "arch": ["x64"] }], "category": "Game", "icon": "build/icon.png" }
+    "artifactName": "Blockverse-Studio.${ext}",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "fileAssociations": [
+      {
+        "ext": "bvw",
+        "name": "Blockverse World",
+        "role": "Editor"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Blockverse-Studio-Setup.exe"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.games",
+      "hardenedRuntime": false,
+      "identity": null
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Game"
+    }
   }
 }
