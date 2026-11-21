@@ -68,6 +68,11 @@
   .pubSub{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:12px}
   .pubL{display:block;font-size:12px;font-weight:800;margin-top:8px}
   .pubL input,#pubLink{display:block;width:100%;margin-top:4px;font:inherit;font-weight:700;font-size:14px;padding:8px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);outline:0;user-select:text;-webkit-user-select:text}
+  .pubCats{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .pubCats button{flex:1;min-width:80px;background:#fff;border:3px solid #cfd6e3;border-radius:10px;padding:7px 4px;font-weight:800;font-size:12px}
+  .pubCats button.on{border-color:var(--ink);background:var(--sun);box-shadow:0 3px 0 var(--ink)}
+  .pubChk{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin-top:10px}
+  .pubChk input{width:18px;height:18px}
   .pubOk{font-weight:900;font-size:16px;color:#157a56;margin:10px 0 6px}
   #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;color:#fff;font-weight:900;font-size:22px}
   #drop.show{display:flex}
@@ -91,6 +96,9 @@
     <div id="mobileBar"><button id="mBuild" class="on" title="Build">+</button><button id="mErase" title="Erase">−</button><button id="mPaint" title="Paint">🖌</button></div>
     <div id="pub"><div class="pubCard"><h2>🚀 Publish to Blockverse</h2><div class="pubSub">Your world goes straight into the <b>Studio Worlds</b> game. Anyone with the share link can play it too.</div>
       <label class="pubL">World name<input id="pubName" maxlength="24"></label><label class="pubL">Builder name<input id="pubAuthor" maxlength="20" placeholder="e.g. Blocky"></label>
+      <div class="pubL">Category <small style="color:var(--muted)">(which tab it shows under in Blockverse)</small></div>
+      <div class="pubCats" id="pubCats"><button data-c="obby">🏁 Obby</button><button data-c="solo" class="on">🧱 Solo</button><button data-c="combat">🎯 Combat</button><button data-c="survival">🔥 Survival</button></div>
+      <label class="pubChk"><input type="checkbox" id="pubOnline"> Also list under <b>Online</b></label>
       <div class="row" style="margin-top:12px"><button id="pubGo" class="go">Publish</button><button id="pubCancel">Cancel</button></div>
       <div id="pubDone" style="display:none"><div class="pubOk">✅ Published!</div><input id="pubLink" readonly><div class="row" style="margin-top:8px"><button id="pubCopy">📋 Copy link</button><button id="pubPlay" class="go">▶ Play it</button></div></div></div></div>
     <div id="drop">Drop a .bvw world file to open it</div>
@@ -290,7 +298,7 @@ function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':'
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 
 // =============== SAVE / LOAD ===============
-function serialize(){ const blocks=[]; for(const [k,bi] of world){ const [x,y,z]=k.split(',').map(Number); blocks.push([x,y,z,BLOCKS[bi].id]); } return {format:'blockverse-world',version:1,name:$('wname').value.trim()||'My World',ground,blocks,created:Date.now()}; }
+function serialize(){ const blocks=[]; for(const [k,bi] of world){ const [x,y,z]=k.split(',').map(Number); blocks.push([x,y,z,BLOCKS[bi].id]); } return {format:'blockverse-world',version:1,name:$('wname').value.trim()||'My World',author:localStorage.getItem('bvstudio:author')||'',cat:pubCat,ground,blocks,created:Date.now()}; }
 function load(data){ if(!data||data.format!=='blockverse-world'||!Array.isArray(data.blocks)) throw new Error('Not a Blockverse world'); clearWorld(false); $('wname').value=data.name||'My World'; ground=data.ground||48; $('gsize').value=ground; $('gsizeV').textContent=ground; buildGround(); for(const [x,y,z,id] of data.blocks){ if(id in BIDX) setBlock(x,y,z,BIDX[id],false); } dirty=false; undoStack.length=redoStack.length=0; hud(); toast('Opened '+(data.name||'world')); }
 function clearWorld(record=true){ if(record) begin(); for(const k of [...world.keys()]){ const [x,y,z]=k.split(',').map(Number); setBlock(x,y,z,null,record); } if(record) commit(); hud(); }
 function download(name,blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
@@ -305,11 +313,12 @@ $('bExport').onclick=()=>{ const d=serialize(); // Export as a Blockverse game m
   const js=`// Blockverse map export — ${d.name}\n// Drop into Blockverse's WORLDS/MAPS list or load with Studio.\nexport default ${JSON.stringify({name:d.name,ground:d.ground,blocks:d.blocks})};\n`; download((d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world')+'.map.js',new Blob([js],{type:'text/javascript'})); toast('Exported map'); };
 // ---------- Publish to Blockverse ----------
 const GAME_URL=(location.protocol==='file:'||window.studio)?'https://kalyan-alt.github.io/blockverse-game/':location.href.replace(/studio\.html.*$/,'');
-function pubEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function pubEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 $('bPublish').onclick=()=>{ if(!world.size){ toast('Build something first!'); return; } $('pubName').value=$('wname').value.trim()||'My World'; $('pubAuthor').value=localStorage.getItem('bvstudio:author')||''; $('pubDone').style.display='none'; $('pubGo').style.display=''; $('pub').classList.add('show'); };
+let pubCat='solo'; document.querySelectorAll('#pubCats button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#pubCats button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); pubCat=b.dataset.c; });
 $('pubCancel').onclick=()=>$('pub').classList.remove('show');
 $('pubGo').onclick=()=>{ const d=serialize(); d.name=$('pubName').value.trim().slice(0,24)||'My World'; d.author=$('pubAuthor').value.trim().slice(0,20); $('wname').value=d.name; try{ localStorage.setItem('bvstudio:author',d.author); }catch{}
-  const w={name:d.name,author:d.author,ground:d.ground,blocks:d.blocks};
+  const w={name:d.name,author:d.author,cat:pubCat,online:$('pubOnline').checked,ground:d.ground,blocks:d.blocks};
   // 1) same-origin publish: the game reads this list directly
   try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
   // 2) share link: works for anyone, anywhere (and for the desktop app)

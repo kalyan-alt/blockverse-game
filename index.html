@@ -40,6 +40,10 @@
   #tabs button{flex:1;background:none;border:0;padding:10px 0 8px;font-size:12px;font-weight:700;color:var(--muted)}
   #tabs button span{display:block;font-size:22px}
   #tabs button.on{color:var(--ink)}
+  .studioCard .thumb{position:relative}
+  .madeIn{position:absolute;right:6px;top:6px;background:var(--ink);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px}
+  .swActs{display:flex;gap:10px;margin-top:6px;font-size:11px;font-weight:800;color:var(--muted)}
+  .swActs span:hover{color:var(--ink)}
   .studioRow{display:flex;gap:14px;align-items:flex-start}
   .studioArt{width:84px;height:84px;flex:none;border:3px solid var(--ink);border-radius:14px;background:linear-gradient(135deg,#8fd3ff,#8c6cff);display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 4px 0 var(--ink)}
   .dl{display:flex;flex-wrap:wrap;gap:8px}
@@ -290,7 +294,7 @@
     <section class="screen active" id="s-games">
       <h2>Pick a game</h2>
       <div class="catbar"><input type="text" id="gameSearch" placeholder="Search games… try “lava”, “online”, “survival”, “boss”"></div>
-      <div class="gtabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button></div>
+      <div class="gtabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button><button data-g="studio">🧱 Studio</button></div>
       <div class="grid" id="gameGrid"></div>
       <div class="catbar" style="display:none" id="gameEmpty"><div class="lbl" style="color:var(--muted);font-weight:700">No games match that. Try another word.</div></div>
       <h2 style="margin-top:22px">Blockverse Studio</h2>
@@ -302,6 +306,7 @@
             <div class="sub" style="margin:4px 0 10px">Place blocks, drop in ready-made buildings, paint, save and share. Runs in your browser, or download the desktop app.</div>
             <div class="dl">
               <a class="buy" href="studio.html">▶ Open in browser</a>
+              <a class="dlbtn" href="#" id="swImport">📂 Import .bvw</a>
               <a class="dlbtn" id="dlWin" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio-Setup.exe">⊞ Windows <small>.exe</small></a>
               <a class="dlbtn" id="dlMac" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio.dmg"> Mac <small>.dmg</small></a>
               <a class="dlbtn" id="dlLin" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Studio.AppImage">🐧 Linux <small>.AppImage</small></a>
@@ -480,7 +485,6 @@ const GAMES = [
   {tags:'obby tower climb spiral solo', cats:'obby solo', id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
   {tags:'solo speed keys boss blockbux worlds run', cats:'solo', id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
   {tags:'survival forest campfire craft wood stone food night wolves online', cats:'survival online', id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
-  {tags:'studio builder create worlds community custom maps explore', cats:'solo', id:'studio', name:'Studio Worlds', emoji:'🧱', bg:'linear-gradient(135deg,#8fd3ff,#8c6cff)', desc:'Explore worlds built in Blockverse Studio · publish your own', stages:1, speed:9, lava:0, studio:true},
   {tags:'combat online shooter blaster team rounds bots pvp', cats:'combat online', id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
@@ -494,9 +498,17 @@ function hex(c){ return '#'+c.toString(16).padStart(6,'0'); }
 const grid=document.getElementById('gameGrid');
 let gameCat='all';
 function gameMatches(g,q){ if(gameCat!=='all'&&!(g.cats||'').split(' ').includes(gameCat)) return false; if(!q) return true; return (g.name+' '+g.desc+' '+(g.tags||'')).toLowerCase().includes(q); }
-function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gameSearch')||{}).value||'').toLowerCase().trim(); const shown=GAMES.filter(g=>gameMatches(g,q)); document.getElementById('gameEmpty').style.display=shown.length?'none':''; for(const g of shown){ const b=document.createElement('button'); b.className='game';
+function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gameSearch')||{}).value||'').toLowerCase().trim(); const shown=GAMES.filter(g=>gameMatches(g,q)); for(const g of shown){ const b=document.createElement('button'); b.className='game';
   const best=g.arena?undefined:(g.escape?acct.best['escape_world']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'world '+best+' · '+(acct.best['escape_wins']||0)+' wins':best+' wipeouts'}</div>`:''}</div>`;
-  b.onclick=()=>g.studio?pickStudio(g):g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);} }
+  b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);}
+  // worlds published from Blockverse Studio appear as real game cards
+  for(const w of studioList()){ if(!gameMatches(studioAsGame(w),q)) continue; const b=document.createElement('button'); b.className='game studioCard';
+    b.innerHTML=`<div class="thumb" style="background:linear-gradient(135deg,#8fd3ff,#8c6cff)">${STUDIO_CATS[w.cat]?.e||'🧱'}<span class="madeIn">Studio</span></div><div class="body"><div class="name">${esc(w.name)}</div><div class="meta">${STUDIO_CATS[w.cat]?.n||'World'}${w.online?' · online':''} · ${w.blocks.length} blocks${w.author?' · by '+esc(w.author):''}</div><div class="swActs"><span data-a="share" title="Copy share link">🔗 Share</span><span data-a="del" title="Remove">🗑</span></div></div>`;
+    b.onclick=()=>{ STUDIO_CUR=w; MAP={id:'studio',name:w.name}; startGame(STUDIO_G); };
+    b.querySelector('[data-a=share]').onclick=e=>{ e.stopPropagation(); const link=studioShareLink(w); (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('🔗 Link copied','Anyone who opens it gets this game'),()=>prompt('Copy this link:',link)); };
+    b.querySelector('[data-a=del]').onclick=e=>{ e.stopPropagation(); if(!confirm('Remove "'+w.name+'" from your games?')) return; studioSave(studioList().filter(x=>x.id!==w.id)); renderGrid(); };
+    grid.appendChild(b); }
+  const shownAny=grid.children.length; document.getElementById('gameEmpty').style.display=shownAny?'none':''; }
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
@@ -708,23 +720,14 @@ function esc(t){ return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const STUDIO_KEY='bv_studio_worlds'; let STUDIO_CUR=null;
 function studioList(){ try{ const a=JSON.parse(store.get(STUDIO_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
 function studioSave(list){ store.set(STUDIO_KEY,JSON.stringify(list.slice(0,40))); }
-function studioEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
-function studioDecode(code){ const json=decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/')))); const d=JSON.parse(json); const blocks=[]; for(const id in d.b){ const a=d.b[id]; for(let i=0;i<a.length;i+=3) blocks.push([a[i],a[i+1],a[i+2],id]); } return {id:'w'+Date.now().toString(36),name:(d.n||'World').slice(0,24),author:(d.a||'').slice(0,20),ground:d.g||48,blocks,created:Date.now()}; }
+function studioEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function studioDecode(code){ const json=decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/')))); const d=JSON.parse(json); const blocks=[]; for(const id in d.b){ const a=d.b[id]; for(let i=0;i<a.length;i+=3) blocks.push([a[i],a[i+1],a[i+2],id]); } return {id:'w'+Date.now().toString(36),name:(d.n||'World').slice(0,24),author:(d.a||'').slice(0,20),cat:STUDIO_CATS[d.c]?d.c:'solo',online:!!d.o,ground:d.g||48,blocks,created:Date.now()}; }
 function studioShareLink(w){ return location.origin+location.pathname+'#world='+studioEncode(w); }
 function studioAdd(w){ const list=studioList().filter(x=>!(x.name===w.name&&x.author===w.author&&x.blocks.length===w.blocks.length)); list.unshift(w); studioSave(list); return w; }
-function pickStudio(g){ const list=studioList();
-  sheet.innerHTML=`<h3>Studio Worlds</h3><div class="sub">Worlds published from Blockverse Studio on this device, plus any shared with you by link</div><div id="swl"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="buy" id="swOpen" style="flex:1">🧱 Open Studio</button><button class="buy" id="swImport" style="flex:1;background:#fff">📂 Import .bvw</button></div><button class="cancel" id="swCancel">Close</button>`;
-  const el=sheet.querySelector('#swl');
-  if(!list.length) el.innerHTML='<div class="sub" style="text-align:center;padding:18px 6px">Nothing here yet. Build something in Studio and hit <b>Publish</b> — it shows up here instantly.</div>';
-  for(const w of list){ const b=document.createElement('div'); b.className='pack'; b.style.cursor='default';
-    b.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;border:3px solid var(--ink);background:linear-gradient(135deg,#8fd3ff,#8c6cff);display:flex;align-items:center;justify-content:center;font-size:26px">🧱</div><div class="amt" style="flex:1">${esc(w.name)}<small>${w.blocks.length} blocks${w.author?' · by '+esc(w.author):''}</small></div><div style="display:flex;flex-direction:column;gap:6px"><button class="price" data-a="play" style="cursor:pointer">Play</button><div style="display:flex;gap:6px"><button data-a="share" title="Copy share link" style="background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-weight:800;font-size:12px;cursor:pointer">🔗</button><button data-a="del" title="Remove" style="background:#ffe4e1;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-weight:800;font-size:12px;cursor:pointer">🗑</button></div></div>`;
-    b.querySelector('[data-a=play]').onclick=()=>{ STUDIO_CUR=w; MAP={id:'studio',name:w.name}; closeModal(); startGame(g); };
-    b.querySelector('[data-a=share]').onclick=()=>{ const link=studioShareLink(w); (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('🔗 Link copied','Send it to a friend — opening it adds the world to their Studio Worlds'),()=>prompt('Copy this link:',link)); };
-    b.querySelector('[data-a=del]').onclick=()=>{ if(!confirm('Remove "'+w.name+'" from this device?')) return; studioSave(studioList().filter(x=>x.id!==w.id)); pickStudio(g); };
-    el.appendChild(b); }
-  sheet.querySelector('#swOpen').onclick=()=>{ location.href='studio.html'; };
-  sheet.querySelector('#swImport').onclick=()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),ground:d.ground||48,blocks:d.blocks,created:Date.now()}); pickStudio(g); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
-  sheet.querySelector('#swCancel').onclick=closeModal; modal.classList.add('show'); }
+const STUDIO_CATS={obby:{n:'Obby',e:'🏁',c:'obby'},solo:{n:'Solo',e:'🧱',c:'solo'},combat:{n:'Combat',e:'🎯',c:'combat'},survival:{n:'Survival',e:'🔥',c:'survival'}};
+const STUDIO_G={id:'studio',name:'Studio World',stages:1,speed:9,lava:0,studio:true};
+function studioAsGame(w){ const c=STUDIO_CATS[w.cat]?.c||'solo'; return {name:w.name,desc:(w.author||'')+' studio '+(STUDIO_CATS[w.cat]?.n||''),tags:'studio custom made '+(w.online?'online':''),cats:c+' studio'+(w.online?' online':'')}; }
+document.getElementById('swImport').onclick=e=>{ e.preventDefault(); const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),cat:d.cat||'solo',online:!!d.online,ground:d.ground||48,blocks:d.blocks,created:Date.now()}); renderGrid(); toast('🧱 Imported','"'+d.name+'" is in your games'); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
 function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return; scene.background=new THREE.Color(0x8fd3ff); scene.fog.color.set(0x8fd3ff);
   const gs=w.ground||48; block(0,-.5,0,gs,1,gs,0x5cc88d);
   const colHeight={}; for(const [x,y,z] of w.blocks){ const k=x+','+z; colHeight[k]=Math.max(colHeight[k]||0,y+1); }
@@ -737,8 +740,8 @@ function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1};
   camYaw=0; camPitch=.45; respawn(); hud(); toast('🧱 '+w.name,(w.author?'by '+w.author+' · ':'')+w.blocks.length+' blocks · explore! Press Esc or the menu to leave'); if(NET) spawnRemotes(); }
 // accept shared worlds via #world=… links
-(function studioImportFromHash(){ const m=location.hash.match(/^#world=([A-Za-z0-9_-]+)/); if(!m) return; try{ const w=studioDecode(m[1]); studioAdd(w); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ toast('🧱 World added','"'+w.name+'" is in Studio Worlds'); const g=GAMES.find(x=>x.studio); if(g) pickStudio(g); },400); }catch(e){ console.warn('bad world link',e); } })();
-addEventListener('message',e=>{ if(e.data&&e.data.type==='bv-publish'&&e.data.world){ try{ const w=e.data.world; studioAdd({id:'w'+Date.now().toString(36),name:(w.name||'World').slice(0,24),author:(w.author||'').slice(0,20),ground:w.ground||48,blocks:w.blocks,created:Date.now()}); }catch{} } });
+(function studioImportFromHash(){ const m=location.hash.match(/^#world=([A-Za-z0-9_-]+)/); if(!m) return; try{ const w=studioDecode(m[1]); studioAdd(w); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ renderGrid(); toast('🧱 New game added','"'+w.name+'" is in your games now'); },400); }catch(e){ console.warn('bad world link',e); } })();
+addEventListener('message',e=>{ if(e.data&&e.data.type==='bv-publish'&&e.data.world){ try{ const w=e.data.world; studioAdd({id:'w'+Date.now().toString(36),name:(w.name||'World').slice(0,24),author:(w.author||'').slice(0,20),cat:STUDIO_CATS[w.cat]?w.cat:'solo',online:!!w.online,ground:w.ground||48,blocks:w.blocks,created:Date.now()}); renderGrid(); }catch{} } });
 // ---------- Speed Escape (worlds, keys, Blockbux, boss) ----------
 let E=null; let WORLD=1;
 const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qInfo=document.getElementById('qInfo');
