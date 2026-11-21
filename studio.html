@@ -61,6 +61,14 @@
     #mobileBar button{width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-size:18px;font-weight:900}
     #mobileBar button.on{background:var(--sun)}
   }
+  #pub{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;padding:16px}
+  #pub.show{display:flex}
+  .pubCard{background:var(--card);border:4px solid var(--ink);border-radius:18px;padding:18px;width:min(420px,100%);box-shadow:0 8px 0 var(--ink)}
+  .pubCard h2{font-size:20px;font-weight:900;margin-bottom:6px}
+  .pubSub{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:12px}
+  .pubL{display:block;font-size:12px;font-weight:800;margin-top:8px}
+  .pubL input,#pubLink{display:block;width:100%;margin-top:4px;font:inherit;font-weight:700;font-size:14px;padding:8px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);outline:0;user-select:text;-webkit-user-select:text}
+  .pubOk{font-weight:900;font-size:16px;color:#157a56;margin:10px 0 6px}
   #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;color:#fff;font-weight:900;font-size:22px}
   #drop.show{display:flex}
 </style>
@@ -74,12 +82,17 @@
     <button class="hb" id="bNew">New</button>
     <button class="hb" id="bOpen">Open</button>
     <button class="hb" id="bSave">Save</button>
-    <button class="hb go" id="bExport">Export</button>
+    <button class="hb" id="bExport">Export</button>
+    <button class="hb go" id="bPublish">🚀 Publish</button>
   </header>
   <div id="view">
     <div id="hud">0 blocks</div>
     <div id="toast"></div>
     <div id="mobileBar"><button id="mBuild" class="on" title="Build">+</button><button id="mErase" title="Erase">−</button><button id="mPaint" title="Paint">🖌</button></div>
+    <div id="pub"><div class="pubCard"><h2>🚀 Publish to Blockverse</h2><div class="pubSub">Your world goes straight into the <b>Studio Worlds</b> game. Anyone with the share link can play it too.</div>
+      <label class="pubL">World name<input id="pubName" maxlength="24"></label><label class="pubL">Builder name<input id="pubAuthor" maxlength="20" placeholder="e.g. Blocky"></label>
+      <div class="row" style="margin-top:12px"><button id="pubGo" class="go">Publish</button><button id="pubCancel">Cancel</button></div>
+      <div id="pubDone" style="display:none"><div class="pubOk">✅ Published!</div><input id="pubLink" readonly><div class="row" style="margin-top:8px"><button id="pubCopy">📋 Copy link</button><button id="pubPlay" class="go">▶ Play it</button></div></div></div></div>
     <div id="drop">Drop a .bvw world file to open it</div>
   </div>
   <aside>
@@ -290,6 +303,20 @@ $('bUndo').onclick=undo; $('bRedo').onclick=redo;
 $('bShot').onclick=()=>{ renderer.render(scene,camera); renderer.domElement.toBlob(b=>download(($('wname').value||'world')+'.png',b)); toast('Snapshot saved'); };
 $('bExport').onclick=()=>{ const d=serialize(); // Export as a Blockverse game map: JS object literal that index.html's buildWorld can consume later
   const js=`// Blockverse map export — ${d.name}\n// Drop into Blockverse's WORLDS/MAPS list or load with Studio.\nexport default ${JSON.stringify({name:d.name,ground:d.ground,blocks:d.blocks})};\n`; download((d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world')+'.map.js',new Blob([js],{type:'text/javascript'})); toast('Exported map'); };
+// ---------- Publish to Blockverse ----------
+const GAME_URL=(location.protocol==='file:'||window.studio)?'https://kalyan-alt.github.io/blockverse-game/':location.href.replace(/studio\.html.*$/,'');
+function pubEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+$('bPublish').onclick=()=>{ if(!world.size){ toast('Build something first!'); return; } $('pubName').value=$('wname').value.trim()||'My World'; $('pubAuthor').value=localStorage.getItem('bvstudio:author')||''; $('pubDone').style.display='none'; $('pubGo').style.display=''; $('pub').classList.add('show'); };
+$('pubCancel').onclick=()=>$('pub').classList.remove('show');
+$('pubGo').onclick=()=>{ const d=serialize(); d.name=$('pubName').value.trim().slice(0,24)||'My World'; d.author=$('pubAuthor').value.trim().slice(0,20); $('wname').value=d.name; try{ localStorage.setItem('bvstudio:author',d.author); }catch{}
+  const w={name:d.name,author:d.author,ground:d.ground,blocks:d.blocks};
+  // 1) same-origin publish: the game reads this list directly
+  try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
+  // 2) share link: works for anyone, anywhere (and for the desktop app)
+  const link=GAME_URL+'#world='+pubEncode(w); $('pubLink').value=link; $('pubGo').style.display='none'; $('pubDone').style.display='';
+  $('pubPlay').onclick=()=>{ if(window.studio) window.open(link); else location.href=link; };
+  $('pubCopy').onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('Link copied'),()=>{ $('pubLink').select(); document.execCommand('copy'); toast('Link copied'); }); };
+  dirty=false; hud(); toast('Published "'+d.name+'"'); };
 // drag & drop
 view.addEventListener('dragover',e=>{ e.preventDefault(); $('drop').classList.add('show'); }); view.addEventListener('dragleave',()=>$('drop').classList.remove('show'));
 view.addEventListener('drop',e=>{ e.preventDefault(); $('drop').classList.remove('show'); const f=e.dataTransfer.files[0]; if(f) f.text().then(t=>load(JSON.parse(t))).catch(e=>toast('Could not open: '+e.message)); });

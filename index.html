@@ -477,6 +477,7 @@ const GAMES = [
   {tags:'obby tower climb spiral solo', cats:'obby solo', id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
   {tags:'solo speed keys boss blockbux worlds run', cats:'solo', id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
   {tags:'survival forest campfire craft wood stone food night wolves online', cats:'survival online', id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
+  {tags:'studio builder create worlds community custom maps explore', cats:'solo', id:'studio', name:'Studio Worlds', emoji:'🧱', bg:'linear-gradient(135deg,#8fd3ff,#8c6cff)', desc:'Explore worlds built in Blockverse Studio · publish your own', stages:1, speed:9, lava:0, studio:true},
   {tags:'combat online shooter blaster team rounds bots pvp', cats:'combat online', id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
@@ -492,7 +493,7 @@ let gameCat='all';
 function gameMatches(g,q){ if(gameCat!=='all'&&!(g.cats||'').split(' ').includes(gameCat)) return false; if(!q) return true; return (g.name+' '+g.desc+' '+(g.tags||'')).toLowerCase().includes(q); }
 function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gameSearch')||{}).value||'').toLowerCase().trim(); const shown=GAMES.filter(g=>gameMatches(g,q)); document.getElementById('gameEmpty').style.display=shown.length?'none':''; for(const g of shown){ const b=document.createElement('button'); b.className='game';
   const best=g.arena?undefined:(g.escape?acct.best['escape_world']:acct.best[g.id]); b.innerHTML=`<div class="thumb" style="background:${g.bg}">${g.emoji}</div><div class="body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div>${best!==undefined?`<div class="best">Best: ${g.escape?'world '+best+' · '+(acct.best['escape_wins']||0)+' wins':best+' wipeouts'}</div>`:''}</div>`;
-  b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);} }
+  b.onclick=()=>g.studio?pickStudio(g):g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);} }
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
@@ -674,6 +675,7 @@ function buildWorld(g){
   const coin=(x,y,z)=>{ const m=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.18,20),mat(0xffd23f)); m.rotation.x=Math.PI/2; m.position.set(x,y,z); m.castShadow=true; scene.add(m); coins.push({mesh:m,taken:false,base:y}); };
   const checkpoint=(x,y,z,i)=>{ block(x,y,z,6,1,6,0x3ad39a,{checkpoint:i}); const pole=new THREE.Mesh(new THREE.BoxGeometry(.3,4,.3),mat(0x1d2433)); pole.position.set(x+2.3,y+2.5,z-2.3); scene.add(pole);
     const flag=new THREE.Mesh(new THREE.BoxGeometry(1.6,1,.15),mat(0xff4b3a)); flag.position.set(x+1.4,y+4,z-2.3); scene.add(flag); checkpoints.push({pos:new THREE.Vector3(x,y+1.5,z),flag}); };
+  if(g.studio){ buildStudio(g,block,coin,checkpoint); return; }
   if(g.escape){ buildEscape(g,block,coin,checkpoint); return; }
   if(g.forest){ buildForest(g,block,coin,checkpoint); return; }
   if(g.arena){ buildArena(g,block,coin,checkpoint); return; }
@@ -697,6 +699,43 @@ function buildWorld(g){
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages};
   camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
+// ---------- Studio Worlds (published from Blockverse Studio) ----------
+const STUDIO_BLOCKS={grass:0x3ad39a,dirt:0x8b5a2b,stone:0x8d94a3,cobble:0x6b7385,wood:0xc98b4a,plank:0xe6b36b,brick:0xc24b3a,sand:0xf3dd9d,snow:0xf3f5f9,leaf:0x2f8f4e,water:0x4aa8ff,glass:0xcfefff,lava:0xff4b3a,glow:0xffd23f,red:0xff4b3a,orange:0xff8c42,yellow:0xffd23f,green:0x3ad39a,blue:0x4aa8ff,purple:0x8c6cff,pink:0xff7ab8,white:0xffffff,gray:0x9aa3b2,black:0x1d2433};
+function esc(t){ return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const STUDIO_KEY='bv_studio_worlds'; let STUDIO_CUR=null;
+function studioList(){ try{ const a=JSON.parse(store.get(STUDIO_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+function studioSave(list){ store.set(STUDIO_KEY,JSON.stringify(list.slice(0,40))); }
+function studioEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function studioDecode(code){ const json=decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/')))); const d=JSON.parse(json); const blocks=[]; for(const id in d.b){ const a=d.b[id]; for(let i=0;i<a.length;i+=3) blocks.push([a[i],a[i+1],a[i+2],id]); } return {id:'w'+Date.now().toString(36),name:(d.n||'World').slice(0,24),author:(d.a||'').slice(0,20),ground:d.g||48,blocks,created:Date.now()}; }
+function studioShareLink(w){ return location.origin+location.pathname+'#world='+studioEncode(w); }
+function studioAdd(w){ const list=studioList().filter(x=>!(x.name===w.name&&x.author===w.author&&x.blocks.length===w.blocks.length)); list.unshift(w); studioSave(list); return w; }
+function pickStudio(g){ const list=studioList();
+  sheet.innerHTML=`<h3>Studio Worlds</h3><div class="sub">Worlds published from Blockverse Studio on this device, plus any shared with you by link</div><div id="swl"></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="buy" id="swOpen" style="flex:1">🧱 Open Studio</button><button class="buy" id="swImport" style="flex:1;background:#fff">📂 Import .bvw</button></div><button class="cancel" id="swCancel">Close</button>`;
+  const el=sheet.querySelector('#swl');
+  if(!list.length) el.innerHTML='<div class="sub" style="text-align:center;padding:18px 6px">Nothing here yet. Build something in Studio and hit <b>Publish</b> — it shows up here instantly.</div>';
+  for(const w of list){ const b=document.createElement('div'); b.className='pack'; b.style.cursor='default';
+    b.innerHTML=`<div style="width:56px;height:56px;border-radius:14px;border:3px solid var(--ink);background:linear-gradient(135deg,#8fd3ff,#8c6cff);display:flex;align-items:center;justify-content:center;font-size:26px">🧱</div><div class="amt" style="flex:1">${esc(w.name)}<small>${w.blocks.length} blocks${w.author?' · by '+esc(w.author):''}</small></div><div style="display:flex;flex-direction:column;gap:6px"><button class="price" data-a="play" style="cursor:pointer">Play</button><div style="display:flex;gap:6px"><button data-a="share" title="Copy share link" style="background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-weight:800;font-size:12px;cursor:pointer">🔗</button><button data-a="del" title="Remove" style="background:#ffe4e1;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-weight:800;font-size:12px;cursor:pointer">🗑</button></div></div>`;
+    b.querySelector('[data-a=play]').onclick=()=>{ STUDIO_CUR=w; MAP={id:'studio',name:w.name}; closeModal(); startGame(g); };
+    b.querySelector('[data-a=share]').onclick=()=>{ const link=studioShareLink(w); (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('🔗 Link copied','Send it to a friend — opening it adds the world to their Studio Worlds'),()=>prompt('Copy this link:',link)); };
+    b.querySelector('[data-a=del]').onclick=()=>{ if(!confirm('Remove "'+w.name+'" from this device?')) return; studioSave(studioList().filter(x=>x.id!==w.id)); pickStudio(g); };
+    el.appendChild(b); }
+  sheet.querySelector('#swOpen').onclick=()=>{ location.href='studio.html'; };
+  sheet.querySelector('#swImport').onclick=()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),ground:d.ground||48,blocks:d.blocks,created:Date.now()}); pickStudio(g); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
+  sheet.querySelector('#swCancel').onclick=closeModal; modal.classList.add('show'); }
+function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return; scene.background=new THREE.Color(0x8fd3ff); scene.fog.color.set(0x8fd3ff);
+  const gs=w.ground||48; block(0,-.5,0,gs,1,gs,0x5cc88d);
+  const colHeight={}; for(const [x,y,z] of w.blocks){ const k=x+','+z; colHeight[k]=Math.max(colHeight[k]||0,y+1); }
+  for(const [x,y,z,id] of w.blocks){ const c=STUDIO_BLOCKS[id]??0x9aa3b2; if(id==='water'){ const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:c,transparent:true,opacity:.6})); m.position.set(x+.5,y+.5,z+.5); scene.add(m); continue; }
+    const opts={}; if(id==='lava') opts.lava=true; const p=block(x+.5,y+.5,z+.5,1,1,1,c,opts); if(id==='glass'){ p.mesh.material.transparent=true; p.mesh.material.opacity=.4; p.mesh.castShadow=false; } if(id==='glow'||id==='lava'){ p.mesh.material.emissive=new THREE.Color(c); p.mesh.material.emissiveIntensity=.6; } }
+  // spawn on the edge nearest the camera, on top of whatever is there
+  const sx=0, sz=Math.floor(gs/2)-3; const sy=colHeight[sx+','+sz]||0; checkpoint(sx+.5,sy+.5,sz+.5,0);
+  totalCoins=0; player=buildAvatar(); scene.add(player);
+  P={pos:new THREE.Vector3(sx+.5,sy+2,sz+.5),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
+  S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1};
+  camYaw=0; camPitch=.45; respawn(); hud(); toast('🧱 '+w.name,(w.author?'by '+w.author+' · ':'')+w.blocks.length+' blocks · explore! Press Esc or the menu to leave'); if(NET) spawnRemotes(); }
+// accept shared worlds via #world=… links
+(function studioImportFromHash(){ const m=location.hash.match(/^#world=([A-Za-z0-9_-]+)/); if(!m) return; try{ const w=studioDecode(m[1]); studioAdd(w); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ toast('🧱 World added','"'+w.name+'" is in Studio Worlds'); const g=GAMES.find(x=>x.studio); if(g) pickStudio(g); },400); }catch(e){ console.warn('bad world link',e); } })();
+addEventListener('message',e=>{ if(e.data&&e.data.type==='bv-publish'&&e.data.world){ try{ const w=e.data.world; studioAdd({id:'w'+Date.now().toString(36),name:(w.name||'World').slice(0,24),author:(w.author||'').slice(0,20),ground:w.ground||48,blocks:w.blocks,created:Date.now()}); }catch{} } });
 // ---------- Speed Escape (worlds, keys, Blockbux, boss) ----------
 let E=null; let WORLD=1;
 const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qInfo=document.getElementById('qInfo');
