@@ -54,7 +54,10 @@
   input[type=text]{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:8px;padding:6px 10px;width:150px;background:#fff;color:var(--ink)}
   .catbar{display:flex;gap:8px;margin:12px 0 8px;align-items:center}
   .catbar input{flex:1;font:inherit;font-weight:700;border:3px solid var(--ink);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:auto}
-  .cattabs{display:flex;gap:6px;margin-bottom:10px}
+  .cattabs,.gtabs{display:flex;gap:6px;margin-bottom:10px}
+  .gtabs{flex-wrap:wrap}
+  .gtabs button{flex:1;min-width:70px;background:#fff;border:3px solid #cfd6e3;border-radius:12px;padding:7px 0;font-weight:800;font-size:13px}
+  .gtabs button.on{border-color:var(--ink);background:#fff6d6;box-shadow:0 3px 0 var(--ink)}
   .cattabs button{flex:1;background:#fff;border:3px solid #cfd6e3;border-radius:12px;padding:7px 0;font-weight:800;font-size:13px}
   .cattabs button.on{border-color:var(--ink);background:#fff6d6;box-shadow:0 3px 0 var(--ink)}
   .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
@@ -287,7 +290,7 @@
     <section class="screen active" id="s-games">
       <h2>Pick a game</h2>
       <div class="catbar"><input type="text" id="gameSearch" placeholder="Search games… try “lava”, “online”, “survival”, “boss”"></div>
-      <div class="cattabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button></div>
+      <div class="gtabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button></div>
       <div class="grid" id="gameGrid"></div>
       <div class="catbar" style="display:none" id="gameEmpty"><div class="lbl" style="color:var(--muted);font-weight:700">No games match that. Try another word.</div></div>
       <h2 style="margin-top:22px">Blockverse Studio</h2>
