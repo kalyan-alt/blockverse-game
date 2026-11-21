@@ -261,6 +261,29 @@
   .hp{display:block;height:8px;width:70px;background:#dfe3ea;border-radius:4px;margin-top:3px;overflow:hidden;border:1.5px solid var(--ink)}
   .hp i{display:block;height:100%;background:var(--mint)}
   @media (hover:hover) and (pointer:fine){#joy,#jump,#camBtn,#fire,#scopeBtn,#slideBtn{display:none!important}}
+  /* ---- Console mode (Nintendo Switch / PlayStation / Xbox browsers, or Settings → Console mode) ---- */
+  body.console #joy,body.console #jump,body.console #camBtn{display:block!important}
+  body.console.ingame.arena #fire,body.console.ingame.arena #scopeBtn,body.console.ingame.arena #slideBtn{display:block!important}
+  body.console #joy{background:#fff;border:4px solid #000;box-shadow:0 5px 0 #000}
+  body.console #knob{background:#000!important;border-color:#000!important}
+  body.console #jump,body.console #fire,body.console #camBtn,body.console #scopeBtn,body.console #slideBtn{background:#fff!important;color:#000!important;border:4px solid #000!important;box-shadow:0 5px 0 #000!important;filter:grayscale(1)}
+  body.console #jump.down,body.console #fire.down{background:#000!important;color:#fff!important}
+  body.console #tabs{background:#fff;border-top:4px solid #000;filter:grayscale(1)}
+  body.console #tabs button{color:#555}
+  body.console #tabs button.on{color:#000}
+  body.console #qpanel,body.console #hud{filter:grayscale(1)}
+  body.console #hud>*{background:#fff!important;color:#000!important;border-color:#000!important}
+  #conBar{display:none;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:4px solid #000;padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:8;font-weight:800;font-size:12px;color:#000;justify-content:center;gap:18px;flex-wrap:wrap;pointer-events:none}
+  #conBar b{display:inline-block;min-width:22px;padding:2px 7px;border:3px solid #000;border-radius:8px;background:#000;color:#fff;margin-right:5px;font-size:11px}
+  body.console.ingame #conBar{display:flex}
+  body.console.ingame #tabs{display:none}
+  body.console #joy{bottom:calc(70px + env(safe-area-inset-bottom))}
+  body.console #jump{bottom:calc(78px + env(safe-area-inset-bottom))}
+  body.console #fire{bottom:calc(144px + env(safe-area-inset-bottom))}
+  body.console #camBtn{bottom:calc(280px + env(safe-area-inset-bottom))}
+  body.console #qpanel{bottom:calc(62px + env(safe-area-inset-bottom))}
+  #conBadge{display:none;background:#000;color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800;margin-left:8px;vertical-align:middle}
+  body.console #conBadge{display:inline-block}
 </style>
 </head>
 <body>
@@ -268,7 +291,7 @@
 <!-- ============ LOGIN ============ -->
 <div id="login">
   <div class="card">
-    <h1>Blockverse</h1>
+    <h1>Blockverse<span id="conBadge">🎮 Console</span></h1>
     <div class="tag">Sign in to keep your Blockbux, items and stats</div>
     <div class="f"><label>Username</label><input id="lgUser" maxlength="16" autocomplete="username" placeholder="3–16 letters, numbers or _"></div>
     <div class="f"><label>Password</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="at least 4 characters"></div>
@@ -285,7 +308,7 @@
 <!-- ============ HOME ============ -->
 <div id="home">
   <div id="topbar">
-    <div class="logo">Blockverse</div>
+    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span></div>
     <button class="chip" id="chipBuy" style="border:0"><svg class="bux" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><span id="bitsTop">0</span><span style="opacity:.7;font-size:16px;line-height:1">+</span></button>
     <button id="avatarBtn" title="Account"><canvas id="avMini" width="72" height="72"></canvas></button>
   </div>
@@ -422,6 +445,7 @@
   <div id="scope"></div>
   <button id="fire">FIRE</button>
   <button id="jump">JUMP</button>
+  <div id="conBar"><span><b>L</b>Move</span><span><b>Drag</b>Look</span><span><b>A</b>Jump</span><span id="conFire" style="display:none"><b>ZR</b>Fire</span><span><b>+</b>Menu</span></div>
   <div id="xhair"></div>
   <div id="toast"></div>
 </div>
@@ -558,7 +582,8 @@ function hideLogin(){ document.getElementById('login').style.display='none'; }
 document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
 (async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); }catch{ store.del('bv_token'); } })();
 // ---------- settings ----------
-const SETTINGS_DEF={mouseSens:1,touchSens:1,invertY:false,fov:60,firstPerson:true,follow:true,shadows:true,quality:'high',chat:true,feed:true,fps:false,shake:true};
+const IS_CONSOLE_UA=/Nintendo|PlayStation|Xbox|WiiU/i.test(navigator.userAgent);
+const SETTINGS_DEF={console:IS_CONSOLE_UA,mouseSens:1,touchSens:1,invertY:false,fov:60,firstPerson:true,follow:true,shadows:true,quality:'high',chat:true,feed:true,fps:false,shake:true};
 let SET={...SETTINGS_DEF};
 const SETTINGS_UI=[
   {k:'mouseSens',name:'Mouse sensitivity',type:'range',min:.2,max:3,step:.1,fmt:v=>v.toFixed(1)+'×'},
@@ -572,6 +597,7 @@ const SETTINGS_UI=[
   {k:'shake',name:'Hit flash & screen effects',type:'bool'},
   {k:'chat',name:'Show chat',type:'bool'},
   {k:'feed',name:'Show server messages',type:'bool'},
+  {k:'console',name:'Console mode (big black & white controls)',type:'bool'},
   {k:'fps',name:'Show FPS counter',type:'bool'},
 ];
 function renderSettings(box){ box.innerHTML=''; for(const o of SETTINGS_UI){ const row=document.createElement('div'); row.className='set'; row.innerHTML=`<div class="l">${o.name}${o.hint?`<small>${o.hint}</small>`:''}</div>`;
@@ -579,7 +605,7 @@ function renderSettings(box){ box.innerHTML=''; for(const o of SETTINGS_UI){ con
   else if(o.type==='bool'){ const b=document.createElement('button'); b.className='tog'+(SET[o.k]?' on':''); b.onclick=()=>{ SET[o.k]=!SET[o.k]; b.classList.toggle('on',SET[o.k]); applySettings(); }; row.appendChild(b); }
   else if(o.type==='seg'){ const sg=document.createElement('div'); sg.className='seg'; for(const op of o.opts){ const b=document.createElement('button'); b.textContent=op; b.className=SET[o.k]===op?'on':''; b.onclick=()=>{ SET[o.k]=op; sg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.textContent===op)); applySettings(); }; sg.appendChild(b); } row.appendChild(sg); }
   box.appendChild(row); } }
-function applySettings(){ acct.follow=SET.follow; renderer.shadowMap.enabled=SET.shadows; renderer.setPixelRatio(Math.min(devicePixelRatio,SET.quality==='low'?1:SET.quality==='medium'?1.5:2)); if(scene){ const sun=scene.children.find(o=>o.isDirectionalLight); if(sun){ sun.castShadow=SET.shadows; } }
+function applySettings(){ document.body.classList.toggle('console',!!SET.console); acct.follow=SET.follow; renderer.shadowMap.enabled=SET.shadows; renderer.setPixelRatio(Math.min(devicePixelRatio,SET.quality==='low'?1:SET.quality==='medium'?1.5:2)); if(scene){ const sun=scene.children.find(o=>o.isDirectionalLight); if(sun){ sun.castShadow=SET.shadows; } }
   if(camera&&!(G&&G.arena&&firstPerson)){ camera.fov=scoped?18:60; camera.updateProjectionMatrix(); }
   chatBtn.style.display=(running&&SET.chat)?'block':'none'; if(!SET.chat) chatEl.classList.remove('show'); feedEl.style.display=SET.feed?'flex':'none'; document.getElementById('fps').style.display=(running&&SET.fps)?'block':'none';
   store.set('bv_settings',JSON.stringify(SET)); if(authToken) markDirty(); }
@@ -1359,7 +1385,7 @@ function update(dt){
   for(const p of platforms){ if(!p.moving) continue; const m=p.moving; p.base=p.base||p.mesh.position.clone(); const prev=p.mesh.position[m.axis]; p.mesh.position[m.axis]=p.base[m.axis]+Math.sin(S.t*m.speed+m.phase)*m.amp; p.delta=p.delta||new THREE.Vector3(); p.delta.set(0,0,0); p.delta[m.axis]=p.mesh.position[m.axis]-prev; }
   if(P.standing&&P.standing.delta) P.pos.add(P.standing.delta);
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
-  ix+=joy.x; iz+=joy.y; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
+  ix+=joy.x+pad.x; iz+=joy.y+pad.y; const len=Math.min(1,Math.hypot(ix,iz)); if(len>1e-6){ const l=Math.hypot(ix,iz); ix=ix/l*len; iz=iz/l*len; }
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw)), right=new THREE.Vector3(-fwd.z,0,fwd.x);
   const move=fwd.multiplyScalar(-iz).add(right.multiplyScalar(ix));
   if((G.arena&&A&&A.meDead)||menuOpen){ move.set(0,0,0); }
@@ -1384,17 +1410,32 @@ function update(dt){
   const dist=(G.arena&&scoped)?5:11, cx=P.pos.x+Math.sin(camYaw)*Math.cos(camPitch)*dist, cz=P.pos.z+Math.cos(camYaw)*Math.cos(camPitch)*dist, cy=P.pos.y+2+Math.sin(camPitch)*dist;
   camera.position.lerp(tmpV.set(cx,cy,cz),.25); camera.lookAt(P.pos.x,P.pos.y+2,P.pos.z);
 }
-let fpsAcc=0,fpsN=0; function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05); if(running){ update(dt); renderer.render(scene,camera); if(SET.fps){ fpsAcc+=dt; fpsN++; if(fpsAcc>=.5){ document.getElementById('fps').textContent=Math.round(fpsN/fpsAcc)+' fps'; fpsAcc=0; fpsN=0; } } } }
+// ---- Gamepad (Xbox / PlayStation / Pro Controller / Steam Deck via the Gamepad API) ----
+const pad={x:0,y:0,prev:{}}; let padSeen=false;
+function pollPad(dt){ const gps=navigator.getGamepads?navigator.getGamepads():[]; let gp=null; for(const g of gps){ if(g&&g.connected){ gp=g; break; } } if(!gp){ pad.x=pad.y=0; return; }
+  if(!padSeen){ padSeen=true; toast('🎮 Controller connected',gp.id.slice(0,40)); }
+  const dz=v=>Math.abs(v)<.18?0:v; const lx=dz(gp.axes[0]||0), ly=dz(gp.axes[1]||0), rx=dz(gp.axes[2]||0), ry=dz(gp.axes[3]||0);
+  pad.x=lx; pad.y=ly; const sens=(scoped?.3:1)*SET.touchSens*2.4*dt, iv=SET.invertY?-1:1;
+  if(rx||ry){ camYaw-=rx*sens; if(G&&G.arena&&firstPerson) fpPitch=Math.max(-1.3,Math.min(1.3,fpPitch-ry*sens*iv)); else camPitch=Math.min(1.2,Math.max(.1,camPitch+ry*sens*iv)); }
+  const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed), was=pad.prev; const now={};
+  now.a=b(0)||b(1); if(now.a&&!was.a) jumpQueued=true; jumpHeld=now.a;                      // A/B (or Cross/Circle): jump
+  now.fire=b(7)||b(5); fireHeld=now.fire&&!!(G&&G.arena);                                 // RT/ZR or RB/R: fire
+  now.scope=b(6)||b(4); if(now.scope&&!was.scope&&G&&G.arena) document.getElementById('scopeBtn').dispatchEvent(new Event('pointerdown'));  // LT/ZL: scope
+  now.slide=b(2)||b(10); if(now.slide&&!was.slide) slideQueued=true;                        // X / L3: slide
+  now.cam=b(3); if(now.cam&&!was.cam) document.getElementById('camBtn').click();            // Y: camera toggle
+  now.menu=b(9); if(now.menu&&!was.menu){ menuOpen?closeMenu():openMenu(); }                // Start/+: menu
+  pad.prev=now; }
+let fpsAcc=0,fpsN=0; function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05); if(running){ pollPad(dt); update(dt); renderer.render(scene,camera); if(SET.fps){ fpsAcc+=dt; fpsN++; if(fpsAcc>=.5){ document.getElementById('fps').textContent=Math.round(fpsN/fpsAcc)+' fps'; fpsAcc=0; fpsN=0; } } } }
 function resize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
 addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 
-function startGame(g){ G=g; qpanel.classList.toggle('show',!!g.escape); chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
+function startGame(g){ document.body.classList.add('ingame'); document.body.classList.toggle('arena',!!g.arena); document.getElementById('conFire').style.display=g.arena?'':'none'; G=g; qpanel.classList.toggle('show',!!g.escape); chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ document.body.classList.remove('ingame','arena'); running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
@@ -1440,6 +1481,7 @@ document.getElementById('installBtn').onclick=async()=>{ if(!deferredInstall) re
 document.getElementById('installX').onclick=()=>bar.classList.remove('show');
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
+if(IS_CONSOLE_UA&&!store.get('bv_console_tuned')){ SET.quality='low'; SET.shadows=false; store.set('bv_console_tuned','1'); try{ store.set('bv_settings',JSON.stringify(SET)); }catch{} }
 applySettings(); renderGrid(); renderSwatches(); renderShop(); renderCatalog(); renderPacks(); fmtBits(); drawMini(); drawPreview(); loop(); claimPurchase();
 </script>
 </body>
