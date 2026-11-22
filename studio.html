@@ -258,7 +258,7 @@ function showStamp(ox,oy,oz){ stampGroup.clear(); stampGroup.position.set(ox,oy,
 
 // avatar reference: a player is ~1.4 wide and 3.4 tall — doors need 2 wide x 4 tall
 const avatarRef=new THREE.Group(); { const m=new THREE.MeshBasicMaterial({color:0x1d2433,transparent:true,opacity:.35}); const body=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.4,.8),m); body.position.y=1.2; const head=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),m); head.position.y=2.9; avatarRef.add(body,head); const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.4,3.4,1.4)),new THREE.LineBasicMaterial({color:0x1d2433})); edges.position.y=1.7; avatarRef.add(edges); } avatarRef.visible=false; scene.add(avatarRef);
-let showAvatar=false; $('bAvatar').onclick=()=>{ showAvatar=!showAvatar; $('bAvatar').classList.toggle('on',showAvatar); avatarRef.visible=showAvatar; if(showAvatar) toast('Avatar is 2 blocks wide, 4 tall — build doors at least that big'); };
+let showAvatar=false; $('bAvatar').onclick=()=>{ showAvatar=!showAvatar; $('bAvatar').classList.toggle('on',showAvatar); avatarRef.visible=showAvatar; if(showAvatar) toast('Doors need to be 2 blocks wide and 4 tall for the avatar to fit'); };
 // =============== RAYCAST ===============
 const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2();
 function hit(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ptr.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); const hs=ray.intersectObjects([groundMesh,...blocksGroup.children]); return hs[0]||null; }

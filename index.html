@@ -1352,7 +1352,7 @@ function updateArena(dt){
   xhair.classList.toggle('target',over);
   arenaHud();
 }
-function pushOut(pos,c){ const m=c.mesh.position,s=c.size, r=.8; const dx=pos.x-m.x, dz=pos.z-m.z, ox=s.x/2+r-Math.abs(dx), oz=s.z/2+r-Math.abs(dz); if(ox>0&&oz>0){ if(ox<oz) pos.x+=Math.sign(dx||1)*ox; else pos.z+=Math.sign(dz||1)*oz; } }
+function pushOut(pos,c){ const m=c.mesh.position,s=c.size, r=(G&&G.studio)?.45:.8; const dx=pos.x-m.x, dz=pos.z-m.z, ox=s.x/2+r-Math.abs(dx), oz=s.z/2+r-Math.abs(dz); if(ox>0&&oz>0){ if(ox<oz) pos.x+=Math.sign(dx||1)*ox; else pos.z+=Math.sign(dz||1)*oz; } }
 let fireHeld=false, fireQueued=false, slideQueued=false, lastMove=new THREE.Vector3(0,0,-1);
 let firstPerson=true, fpPitch=0;
 function setFP(on){ firstPerson=on; camera.fov=scoped?18:(on&&G&&G.arena?SET.fov:60); camera.updateProjectionMatrix(); document.getElementById('camBtn').textContent=on?'👁️ 1st person':'🎥 3rd person'; if(!on&&player) player.visible=!(A&&A.meDead); if(on&&document.pointerLockElement!==renderer.domElement&&matchMedia('(pointer:fine)').matches&&G&&G.arena) renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock(); }
