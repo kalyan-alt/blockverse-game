@@ -190,6 +190,9 @@
   #login .pay{margin-top:4px}
   #login .alt{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;font-weight:700}
   #login .alt button{background:none;border:0;color:#157a56;font-weight:800;text-decoration:underline}
+  #login .or{display:flex;align-items:center;gap:10px;margin:12px 0 10px;color:var(--muted);font-size:12px;font-weight:800}
+  #login .or:before,#login .or:after{content:'';flex:1;height:3px;background:#e3e7ef;border-radius:2px}
+  #gBtn{display:flex;justify-content:center;min-height:44px}
   #login .guest{width:100%;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:10px;font-weight:800;margin-top:10px}
   .copy{text-align:center;color:var(--muted);font-size:11px;font-weight:600;margin-top:16px;line-height:1.4}
   #homeCopy{padding:10px 14px 0;text-align:center;color:var(--muted);font-size:11px;font-weight:600}
@@ -291,13 +294,14 @@
 <!-- ============ LOGIN ============ -->
 <div id="login">
   <div class="card">
-    <h1>Blockverse<span id="conBadge">🎮 Console</span></h1>
+    <h1>Blockverse</h1>
     <div class="tag">Sign in to keep your Blockbux, items and stats</div>
     <div class="f"><label>Username</label><input id="lgUser" maxlength="16" autocomplete="username" placeholder="3–16 letters, numbers or _"></div>
     <div class="f"><label>Password</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="at least 4 characters"></div>
     <div class="err" id="lgErr"></div>
     <button class="pay" id="lgGo">Sign in</button>
     <div class="alt"><span id="lgSwitchTxt">New here?</span><button id="lgSwitch">Create an account</button></div>
+    <div id="gWrap" style="display:none"><div class="or"><span>or</span></div><div id="gBtn"></div></div>
     <button class="guest" id="lgGuest">Play as guest</button>
     <div class="copy">© 2026 Blockverse. All rights reserved.<br>Blockverse is an original game and is not affiliated with any other game or company.</div>
   </div>
@@ -455,6 +459,7 @@
 // =============== ONLINE CONFIG ===============
 // Paste your deployed server address here, e.g. 'wss://blockverse-server.onrender.com'. Leave '' for bots-only.
 const ONLINE_URL = 'wss://blockverse-server-8enf.onrender.com';
+const GOOGLE_CLIENT_ID = ''; // paste your Google OAuth Web client ID here (ends in .apps.googleusercontent.com) to enable "Sign in with Google"
 const SERVER_HTTP = ONLINE_URL.replace(/^wss:/,'https:').replace(/^ws:/,'http:');
 // =============== ACCOUNT / STATE ===============
 const COLORS = [
@@ -580,6 +585,20 @@ async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=n
 lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
 document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
 function hideLogin(){ document.getElementById('login').style.display='none'; }
+// ---- Sign in with Google (Google Identity Services) ----
+if(GOOGLE_CLIENT_ID&&ONLINE_URL){ const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.onload=()=>{ try{
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCred,ux_mode:'popup'});
+    google.accounts.id.renderButton(document.getElementById('gBtn'),{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:280});
+    document.getElementById('gWrap').style.display=''; }catch(e){ console.warn('google sign-in unavailable',e); } }; document.head.appendChild(sc); }
+async function onGoogleCred(resp,chosenName){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…';
+  try{ const r=await fetch(SERVER_HTTP+'/auth/google',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({credential:resp.credential,u:chosenName||undefined})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
+    if(d.needName){ askGoogleName(resp,d.suggest||''); return; }
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`); }
+  catch(e){ lgErr.className='err'; lgErr.textContent=e.message; } }
+function askGoogleName(resp,suggest){ sheet.innerHTML=`<h3>Pick a username</h3><div class="sub">This is the name other players see. 3–16 letters, numbers or _</div><input id="gName" maxlength="16" value="${esc(suggest)}" style="width:100%;font:inherit;font-weight:800;font-size:16px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink)"><div class="err" id="gErr" style="margin-top:6px"></div><button class="buy" id="gOk">Create my account</button><button class="cancel" id="gCancel">Cancel</button>`;
+  const inp=sheet.querySelector('#gName'), err=sheet.querySelector('#gErr'); inp.focus(); inp.select();
+  sheet.querySelector('#gOk').onclick=()=>{ const u=inp.value.trim(); const prob=nameProblem(u); if(prob){ err.textContent=prob; return; } closeModal(); onGoogleCred(resp,u); };
+  sheet.querySelector('#gCancel').onclick=()=>{ closeModal(); lgErr.className='err'; lgErr.textContent=''; }; modal.classList.add('show'); }
 document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
 (async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); }catch{ store.del('bv_token'); } })();
 // ---------- settings ----------
