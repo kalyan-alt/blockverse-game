@@ -527,7 +527,7 @@ function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gam
   b.onclick=()=>g.forest?pickNights(g):g.escape?pickWorld(g):(g.arena?openLobby(g):startObby(g)); grid.appendChild(b);}
   // worlds published from Blockverse Studio appear as real game cards
   for(const w of studioList()){ if(!gameMatches(studioAsGame(w),q)) continue; const b=document.createElement('button'); b.className='game studioCard';
-    b.innerHTML=`<div class="thumb" style="background:linear-gradient(135deg,#8fd3ff,#8c6cff)">${STUDIO_CATS[w.cat]?.e||'🧱'}<span class="madeIn">Studio</span></div><div class="body"><div class="name">${esc(w.name)}</div><div class="meta">${STUDIO_CATS[w.cat]?.n||'World'}${w.online?' · online':''} · ${w.blocks.length} blocks${w.author?' · by '+esc(w.author):''}</div><div class="swActs"><span data-a="share" title="Copy share link">🔗 Share</span><span data-a="del" title="Remove">🗑</span></div></div>`;
+    b.innerHTML=`<div class="thumb" style="background:linear-gradient(135deg,#8fd3ff,#8c6cff)">${STUDIO_CATS[w.cat]?.e||'🧱'}<span class="madeIn">Studio</span></div><div class="body"><div class="name">${esc(w.name)}</div><div class="meta">${STUDIO_CATS[w.cat]?.n||'World'}${w.online?' · online':''} · ${w.blocks.length} blocks${(w.pays||[]).length?' · 💰':''}${w.author?' · by '+esc(w.author):''}</div><div class="swActs"><span data-a="share" title="Copy share link">🔗 Share</span><span data-a="del" title="Remove">🗑</span></div></div>`;
     b.onclick=()=>{ STUDIO_CUR=w; MAP={id:'studio',name:w.name}; startGame(STUDIO_G); };
     b.querySelector('[data-a=share]').onclick=e=>{ e.stopPropagation(); const link=studioShareLink(w); (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('🔗 Link copied','Anyone who opens it gets this game'),()=>prompt('Copy this link:',link)); };
     b.querySelector('[data-a=del]').onclick=e=>{ e.stopPropagation(); if(!confirm('Remove "'+w.name+'" from your games?')) return; studioSave(studioList().filter(x=>x.id!==w.id)); renderGrid(); };
@@ -741,23 +741,27 @@ function buildWorld(g){
   camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
 // ---------- Studio Worlds (published from Blockverse Studio) ----------
-const STUDIO_BLOCKS={grass:0x3ad39a,dirt:0x8b5a2b,stone:0x8d94a3,cobble:0x6b7385,wood:0xc98b4a,plank:0xe6b36b,brick:0xc24b3a,sand:0xf3dd9d,snow:0xf3f5f9,leaf:0x2f8f4e,water:0x4aa8ff,glass:0xcfefff,lava:0xff4b3a,glow:0xffd23f,red:0xff4b3a,orange:0xff8c42,yellow:0xffd23f,green:0x3ad39a,blue:0x4aa8ff,purple:0x8c6cff,pink:0xff7ab8,white:0xffffff,gray:0x9aa3b2,black:0x1d2433};
+const STUDIO_BLOCKS={grass:0x3ad39a,dirt:0x8b5a2b,stone:0x8d94a3,cobble:0x6b7385,wood:0xc98b4a,plank:0xe6b36b,brick:0xc24b3a,sand:0xf3dd9d,snow:0xf3f5f9,leaf:0x2f8f4e,water:0x4aa8ff,glass:0xcfefff,lava:0xff4b3a,glow:0xffd23f,red:0xff4b3a,orange:0xff8c42,yellow:0xffd23f,green:0x3ad39a,blue:0x4aa8ff,purple:0x8c6cff,pink:0xff7ab8,white:0xffffff,gray:0x9aa3b2,black:0x1d2433,pay:0xffd23f};
 function esc(t){ return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const STUDIO_KEY='bv_studio_worlds'; let STUDIO_CUR=null;
 function studioList(){ try{ const a=JSON.parse(store.get(STUDIO_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
 function studioSave(list){ store.set(STUDIO_KEY,JSON.stringify(list.slice(0,40))); }
-function studioEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
-function studioDecode(code){ const json=decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/')))); const d=JSON.parse(json); const blocks=[]; for(const id in d.b){ const a=d.b[id]; for(let i=0;i<a.length;i+=3) blocks.push([a[i],a[i+1],a[i+2],id]); } return {id:'w'+Date.now().toString(36),name:(d.n||'World').slice(0,24),author:(d.a||'').slice(0,20),cat:STUDIO_CATS[d.c]?d.c:'solo',online:!!d.o,ground:d.g||48,blocks,created:Date.now()}; }
+function studioEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by,p:w.pays||[]}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function studioDecode(code){ const json=decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/')))); const d=JSON.parse(json); const blocks=[]; for(const id in d.b){ const a=d.b[id]; for(let i=0;i<a.length;i+=3) blocks.push([a[i],a[i+1],a[i+2],id]); } return {id:'w'+Date.now().toString(36),name:(d.n||'World').slice(0,24),author:(d.a||'').slice(0,20),cat:STUDIO_CATS[d.c]?d.c:'solo',online:!!d.o,ground:d.g||48,blocks,pays:d.p||[],created:Date.now()}; }
 function studioShareLink(w){ return location.origin+location.pathname+'#world='+studioEncode(w); }
 function studioAdd(w){ const list=studioList().filter(x=>!(x.name===w.name&&x.author===w.author&&x.blocks.length===w.blocks.length)); list.unshift(w); studioSave(list); return w; }
 const STUDIO_CATS={obby:{n:'Obby',e:'🏁',c:'obby'},solo:{n:'Solo',e:'🧱',c:'solo'},combat:{n:'Combat',e:'🎯',c:'combat'},survival:{n:'Survival',e:'🔥',c:'survival'}};
 const STUDIO_G={id:'studio',name:'Studio World',stages:1,speed:9,lava:0,studio:true};
 function studioAsGame(w){ const c=STUDIO_CATS[w.cat]?.c||'solo'; return {name:w.name,desc:(w.author||'')+' studio '+(STUDIO_CATS[w.cat]?.n||''),tags:'studio custom made '+(w.online?'online':''),cats:c+' studio'+(w.online?' online':'')}; }
-document.getElementById('swImport').onclick=e=>{ e.preventDefault(); const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),cat:d.cat||'solo',online:!!d.online,ground:d.ground||48,blocks:d.blocks,created:Date.now()}); renderGrid(); toast('🧱 Imported','"'+d.name+'" is in your games'); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
-function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return; scene.background=new THREE.Color(0x8fd3ff); scene.fog.color.set(0x8fd3ff);
+document.getElementById('swImport').onclick=e=>{ e.preventDefault(); const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),cat:d.cat||'solo',online:!!d.online,ground:d.ground||48,blocks:d.blocks,pays:d.pays||[],created:Date.now()}); renderGrid(); toast('🧱 Imported','"'+d.name+'" is in your games'); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
+let STUDIO_PAYS=[], payPromptOpen=false;
+function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return; STUDIO_PAYS=[]; payPromptOpen=false; scene.background=new THREE.Color(0x8fd3ff); scene.fog.color.set(0x8fd3ff);
   const gs=w.ground||48; block(0,-.5,0,gs,1,gs,0x5cc88d);
   const colHeight={}; for(const [x,y,z] of w.blocks){ const k=x+','+z; colHeight[k]=Math.max(colHeight[k]||0,y+1); }
   for(const [x,y,z,id] of w.blocks){ const c=STUDIO_BLOCKS[id]??0x9aa3b2; if(id==='water'){ const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:c,transparent:true,opacity:.6})); m.position.set(x+.5,y+.5,z+.5); scene.add(m); continue; }
+    if(id==='pay'){ const price=(w.pays||[]).find(q=>q[0]===x&&q[1]===y&&q[2]===z)?.[3]||10; const p=block(x+.5,y+.5,z+.5,1,1,1,0xffd23f,{}); p.pay=price; p.mesh.material.emissive=new THREE.Color(0xb08600); p.mesh.material.emissiveIntensity=.5;
+      const cv=document.createElement('canvas'); cv.width=cv.height=128; const cx=cv.getContext('2d'); cx.fillStyle='#1d2433'; cx.font='900 54px Trebuchet MS,Verdana,sans-serif'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('$'+price,64,64);
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true})); sp.position.set(x+.5,y+1.5,z+.5); sp.scale.set(1.4,1.4,1); scene.add(sp); p.payLabel=sp; STUDIO_PAYS.push(p); continue; }
     const opts={}; if(id==='lava') opts.lava=true; const p=block(x+.5,y+.5,z+.5,1,1,1,c,opts); if(id==='glass'){ p.mesh.material.transparent=true; p.mesh.material.opacity=.4; p.mesh.castShadow=false; } if(id==='glow'||id==='lava'){ p.mesh.material.emissive=new THREE.Color(c); p.mesh.material.emissiveIntensity=.6; } }
   // spawn on the edge nearest the camera, on top of whatever is there
   const sx=0, sz=Math.floor(gs/2)-3; const sy=colHeight[sx+','+sz]||0; checkpoint(sx+.5,sy+.5,sz+.5,0);
@@ -765,9 +769,24 @@ function buildStudio(g,block,coin,checkpoint){ const w=STUDIO_CUR; if(!w) return
   P={pos:new THREE.Vector3(sx+.5,sy+2,sz+.5),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null};
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1};
   camYaw=0; camPitch=.45; respawn(); hud(); toast('🧱 '+w.name,(w.author?'by '+w.author+' · ':'')+w.blocks.length+' blocks · explore! Press Esc or the menu to leave'); if(NET) spawnRemotes(); }
+function checkPayGates(){ if(!G||!G.studio||payPromptOpen||!STUDIO_PAYS.length) return; for(const p of STUDIO_PAYS){ if(p.paid) continue; const m=p.mesh.position; if(Math.abs(P.pos.x-m.x)<1.6&&Math.abs(P.pos.z-m.z)<1.6&&Math.abs(P.pos.y-m.y)<3){ openPayPrompt(p); return; } } }
+function openPayPrompt(p){ payPromptOpen=true; const w=STUDIO_CUR, price=p.pay, to=w.author||'the builder'; const can=acct.bits>=price;
+  sheet.innerHTML=`<h3>💰 Pay gate</h3><div class="sub">This part of <b>${esc(w.name)}</b> costs <b>${price} Blockbux</b>. The Blockbux go to <b>${esc(to)}</b>, who built this game.</div>
+    <div class="pack" style="cursor:default"><div class="amt" style="flex:1">You have<small>${acct.bits} Blockbux</small></div><div class="price">${can?'-'+price:'not enough'}</div></div>
+    <button class="buy" id="payYes" ${can?'':'disabled style="opacity:.5"'}>Pay ${price} Blockbux</button>${can?'':'<button class="buy" id="payShop" style="background:#fff">Get Blockbux</button>'}<button class="cancel" id="payNo">No thanks</button>`;
+  sheet.querySelector('#payNo').onclick=()=>{ closeModal(); P.pos.z+=Math.sign(P.pos.z-p.mesh.position.z||1)*2.2; P.pos.x+=Math.sign(P.pos.x-p.mesh.position.x||1)*1.2; setTimeout(()=>payPromptOpen=false,800); };
+  const shop=sheet.querySelector('#payShop'); if(shop) shop.onclick=()=>{ closeModal(); payPromptOpen=false; leaveGame(); document.getElementById('chipBuy').click(); };
+  if(can) sheet.querySelector('#payYes').onclick=()=>{ acct.bits-=price; fmtBits(); markDirty(); p.paid=true; scene.remove(p.mesh); if(p.payLabel) scene.remove(p.payLabel); const i=platforms.indexOf(p); if(i>=0) platforms.splice(i,1);
+    closeModal(); payPromptOpen=false; toast('💰 Paid '+price+' Blockbux','to '+esc(to)+' · gate opened'); sendPayout(w,price); };
+  modal.classList.add('show'); }
+function sendPayout(w,amount){ if(!w.author) return; if(w.author===acct.name){ acct.bits+=amount; fmtBits(); markDirty(); return; } // paying yourself just round-trips
+  const payload={token:authToken,to:w.author,amount,world:w.name,from:acct.name};
+  if(!authToken||!ONLINE_URL){ queuePayout(payload); return; }
+  fetch(SERVER_HTTP+'/pay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)}).then(r=>{ if(!r.ok) throw 0; }).catch(()=>queuePayout(payload)); }
+function queuePayout(pl){ try{ const q=JSON.parse(store.get('bv_pending_payouts')||'[]'); q.push({...pl,token:undefined,t:Date.now()}); store.set('bv_pending_payouts',JSON.stringify(q.slice(-100))); }catch{} }
 // accept shared worlds via #world=… links
 (function studioImportFromHash(){ const m=location.hash.match(/^#world=([A-Za-z0-9_-]+)/); if(!m) return; try{ const w=studioDecode(m[1]); studioAdd(w); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ renderGrid(); toast('🧱 New game added','"'+w.name+'" is in your games now'); },400); }catch(e){ console.warn('bad world link',e); } })();
-addEventListener('message',e=>{ if(e.data&&e.data.type==='bv-publish'&&e.data.world){ try{ const w=e.data.world; studioAdd({id:'w'+Date.now().toString(36),name:(w.name||'World').slice(0,24),author:(w.author||'').slice(0,20),cat:STUDIO_CATS[w.cat]?w.cat:'solo',online:!!w.online,ground:w.ground||48,blocks:w.blocks,created:Date.now()}); renderGrid(); }catch{} } });
+addEventListener('message',e=>{ if(e.data&&e.data.type==='bv-publish'&&e.data.world){ try{ const w=e.data.world; studioAdd({id:'w'+Date.now().toString(36),name:(w.name||'World').slice(0,24),author:(w.author||'').slice(0,20),cat:STUDIO_CATS[w.cat]?w.cat:'solo',online:!!w.online,ground:w.ground||48,blocks:w.blocks,pays:w.pays||[],created:Date.now()}); renderGrid(); }catch{} } });
 // ---------- Speed Escape (worlds, keys, Blockbux, boss) ----------
 let E=null; let WORLD=1;
 const qpanel=document.getElementById('qpanel'), qText=document.getElementById('qText'), qInfo=document.getElementById('qInfo');
@@ -1425,7 +1444,7 @@ function pollPad(dt){ const gps=navigator.getGamepads?navigator.getGamepads():[]
   now.cam=b(3); if(now.cam&&!was.cam) document.getElementById('camBtn').click();            // Y: camera toggle
   now.menu=b(9); if(now.menu&&!was.menu){ menuOpen?closeMenu():openMenu(); }                // Start/+: menu
   pad.prev=now; }
-let fpsAcc=0,fpsN=0; function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05); if(running){ pollPad(dt); update(dt); renderer.render(scene,camera); if(SET.fps){ fpsAcc+=dt; fpsN++; if(fpsAcc>=.5){ document.getElementById('fps').textContent=Math.round(fpsN/fpsAcc)+' fps'; fpsAcc=0; fpsN=0; } } } }
+let fpsAcc=0,fpsN=0; function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05); if(running){ pollPad(dt); update(dt); checkPayGates(); renderer.render(scene,camera); if(SET.fps){ fpsAcc+=dt; fpsN++; if(fpsAcc>=.5){ document.getElementById('fps').textContent=Math.round(fpsN/fpsAcc)+' fps'; fpsAcc=0; fpsN=0; } } } }
 function resize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
 addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
