@@ -117,6 +117,7 @@
     <div class="panel">
       <div class="lbl">Blocks <small>Q / E to cycle</small></div>
       <div class="pal" id="pal"></div>
+      <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <input type="number" id="shopPrice" min="1" max="999" value="25" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
       <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <input type="number" id="payPrice" min="1" max="999" value="10" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
     </div>
     <div class="panel">
@@ -167,6 +168,7 @@ const BLOCKS=[
   {id:'gray',   name:'Gray',   c:0x9aa3b2},
   {id:'black',  name:'Black',  c:0x1d2433},
   {id:'pay',    name:'Pay gate', c:0xffd23f, glow:0xb08600, pay:true},
+  {id:'counter',name:'Shop counter', c:0xe6b36b, counter:true},
 ];
 const BIDX=Object.fromEntries(BLOCKS.map((b,i)=>[b.id,i]));
 
@@ -197,6 +199,7 @@ function obby(){ let o=[]; const ids=['green','yellow','orange','red','purple','
 function shop(){ let o=box(0,0,0,9,0,6,'plank'); o=o.concat(box(0,1,0,9,5,6,'white',true));
   o=cut(o,b=>b[2]===0&&b[1]>=2&&b[1]<=4&&b[0]>=1&&b[0]<=8); for(let x=1;x<=8;x++)for(let y=2;y<=4;y++) o.push([x,y,0,'glass']);   // big front window
   o=door(o,4,5,0,1,4);                                                                                                            // door
+  o=o.concat(box(2,1,4,7,1,4,'plank')); o=cut(o,b=>b[0]===4&&b[1]===1&&b[2]===4); o.push([4,1,4,'counter']);                     // sales counter with a shop block
   for(let x=-1;x<=10;x++) o.push([x,6,-1,(x%2?'red':'white')],[x,6,0,(x%2?'red':'white')]); o=o.concat(box(0,6,1,9,6,6,'gray')); return o; }
 const BUILDINGS=[
   {id:'house',   name:'House',    e:'🏠', f:house},
@@ -208,6 +211,7 @@ const BUILDINGS=[
   {id:'wall',    name:'Wall',     e:'🧱', f:wall},
   {id:'bridge',  name:'Bridge',   e:'🌉', f:bridge},
   {id:'pool',    name:'Pool',     e:'💧', f:pool},
+  {id:'counter', name:'Counter',  e:'🛒', f:()=>[[0,0,0,'plank'],[1,0,0,'counter'],[2,0,0,'plank'],[0,1,0,'wood'],[2,1,0,'wood']]},
   {id:'fire',    name:'Campfire', e:'🔥', f:campfire},
   {id:'obby',    name:'Obby run', e:'🏁', f:obby},
 ];
@@ -215,6 +219,7 @@ const BUILDINGS=[
 // =============== STATE ===============
 const world=new Map(); // "x,y,z" -> blockIndex
 const prices=new Map(); // key -> Blockbux price for pay gates
+const shops=new Map();  // key -> {price,item} for shop counters
 const key=(x,y,z)=>x+','+y+','+z;
 let tool='build', cur=BIDX.grass, brush=1, ground=48, dirty=false;
 let stamp=null, stampRot=0; // active building
@@ -243,7 +248,7 @@ function addMesh(x,y,z,bi){ const m=new THREE.Mesh(geo,mats[bi]); m.position.set
 function setBlock(x,y,z,bi,record=true){ const k=key(x,y,z); const prev=world.has(k)?world.get(k):null; if(prev===bi) return; if(y<0||y>128||Math.abs(x)>200||Math.abs(z)>200) return;
   if(record&&pending) pending.push([x,y,z,prev,bi]);
   if(meshes.has(k)){ blocksGroup.remove(meshes.get(k)); meshes.delete(k); }
-  if(bi===null){ world.delete(k); prices.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay) prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); else prices.delete(k); addMesh(x,y,z,bi); } dirty=true; }
+  if(bi===null){ world.delete(k); prices.delete(k); shops.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay) prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); else prices.delete(k); if(BLOCKS[bi].counter) shops.set(k,{price:Math.max(1,Math.min(999,+($('shopPrice')?.value)||25)),item:($('shopItem')?.value||'Mystery item').trim().slice(0,24)||'Mystery item'}); else shops.delete(k); addMesh(x,y,z,bi); } dirty=true; }
 function begin(){ pending=[]; } function commit(){ if(pending&&pending.length){ undoStack.push(pending); if(undoStack.length>200) undoStack.shift(); redoStack.length=0; } pending=null; hud(); }
 function undo(){ const a=undoStack.pop(); if(!a) return; for(let i=a.length-1;i>=0;i--){ const [x,y,z,p]=a[i]; setBlock(x,y,z,p,false); } redoStack.push(a); hud(); toast('Undo'); }
 function redo(){ const a=redoStack.pop(); if(!a) return; for(const [x,y,z,,n] of a) setBlock(x,y,z,n,false); undoStack.push(a); hud(); toast('Redo'); }
@@ -304,15 +309,15 @@ $('gsize').oninput=e=>{ ground=+e.target.value; $('gsizeV').textContent=ground; 
 $('rotL').onclick=()=>{ stampRot=(stampRot+3)%4; }; $('rotR').onclick=()=>{ stampRot=(stampRot+1)%4; };
 
 // =============== UI RENDER ===============
-function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; }
+function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; }
 function renderBld(){ const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast('Click the ground to place · R rotates · Shift keeps stamping'); } renderBld(); }; el.appendChild(btn); }); }
 function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 
 // =============== SAVE / LOAD ===============
-function serialize(){ const blocks=[]; for(const [k,bi] of world){ const [x,y,z]=k.split(',').map(Number); blocks.push([x,y,z,BLOCKS[bi].id]); } const pays=[...prices].map(([k,v])=>[...k.split(',').map(Number),v]); return {format:'blockverse-world',version:1,name:$('wname').value.trim()||'My World',author:localStorage.getItem('bvstudio:author')||'',cat:pubCat,ground,blocks,pays,created:Date.now()}; }
-function load(data){ if(!data||data.format!=='blockverse-world'||!Array.isArray(data.blocks)) throw new Error('Not a Blockverse world'); clearWorld(false); $('wname').value=data.name||'My World'; ground=data.ground||48; $('gsize').value=ground; $('gsizeV').textContent=ground; buildGround(); for(const [x,y,z,id] of data.blocks){ if(id in BIDX) setBlock(x,y,z,BIDX[id],false); } for(const [x,y,z,v] of (data.pays||[])){ if(world.get(key(x,y,z))===BIDX.pay) prices.set(key(x,y,z),v); } dirty=false; undoStack.length=redoStack.length=0; hud(); toast('Opened '+(data.name||'world')); }
-function clearWorld(record=true){ if(!record) prices.clear(); if(record) begin(); for(const k of [...world.keys()]){ const [x,y,z]=k.split(',').map(Number); setBlock(x,y,z,null,record); } if(record) commit(); hud(); }
+function serialize(){ const blocks=[]; for(const [k,bi] of world){ const [x,y,z]=k.split(',').map(Number); blocks.push([x,y,z,BLOCKS[bi].id]); } const pays=[...prices].map(([k,v])=>[...k.split(',').map(Number),v]); const shopsOut=[...shops].map(([k,v])=>[...k.split(',').map(Number),v.price,v.item]); return {format:'blockverse-world',version:1,name:$('wname').value.trim()||'My World',author:localStorage.getItem('bvstudio:author')||'',cat:pubCat,ground,blocks,pays,shops:shopsOut,created:Date.now()}; }
+function load(data){ if(!data||data.format!=='blockverse-world'||!Array.isArray(data.blocks)) throw new Error('Not a Blockverse world'); clearWorld(false); $('wname').value=data.name||'My World'; ground=data.ground||48; $('gsize').value=ground; $('gsizeV').textContent=ground; buildGround(); for(const [x,y,z,id] of data.blocks){ if(id in BIDX) setBlock(x,y,z,BIDX[id],false); } for(const [x,y,z,v] of (data.pays||[])){ if(world.get(key(x,y,z))===BIDX.pay) prices.set(key(x,y,z),v); } for(const [x,y,z,v,item] of (data.shops||[])){ if(world.get(key(x,y,z))===BIDX.counter) shops.set(key(x,y,z),{price:v,item:String(item||'Mystery item')}); } dirty=false; undoStack.length=redoStack.length=0; hud(); toast('Opened '+(data.name||'world')); }
+function clearWorld(record=true){ if(!record){ prices.clear(); shops.clear(); } if(record) begin(); for(const k of [...world.keys()]){ const [x,y,z]=k.split(',').map(Number); setBlock(x,y,z,null,record); } if(record) commit(); hud(); }
 function download(name,blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 function save(){ const d=serialize(); const fname=d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world'; try{ localStorage.setItem('bvstudio:last',JSON.stringify(d)); }catch{} if(window.studio){ window.studio.saveAs(fname+'.bvw',JSON.stringify(d)).then(ok=>{ if(ok){ dirty=false; hud(); toast('Saved'); } }); return; } download(fname+'.bvw',new Blob([JSON.stringify(d)],{type:'application/json'})); dirty=false; hud(); toast('Saved '+fname+'.bvw'); }
 $('bSave').onclick=save;
@@ -325,13 +330,13 @@ $('bExport').onclick=()=>{ const d=serialize(); // Export as a Blockverse game m
   const js=`// Blockverse map export — ${d.name}\n// Drop into Blockverse's WORLDS/MAPS list or load with Studio.\nexport default ${JSON.stringify({name:d.name,ground:d.ground,blocks:d.blocks})};\n`; download((d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world')+'.map.js',new Blob([js],{type:'text/javascript'})); toast('Exported map'); };
 // ---------- Publish to Blockverse ----------
 const GAME_URL=(location.protocol==='file:'||window.studio)?'https://kalyan-alt.github.io/blockverse-game/':location.href.replace(/studio\.html.*$/,'');
-function pubEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by,p:w.pays||[]}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function pubEncode(w){ const by={}; for(const [x,y,z,id] of w.blocks){ (by[id]=by[id]||[]).push(x,y,z); } const json=JSON.stringify({n:w.name,a:w.author||'',c:w.cat||'solo',o:w.online?1:0,g:w.ground||48,b:by,p:w.pays||[],s:w.shops||[]}); return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 $('bPublish').onclick=()=>{ if(!world.size){ toast('Build something first!'); return; } $('pubName').value=$('wname').value.trim()||'My World'; $('pubAuthor').value=localStorage.getItem('bvstudio:author')||''; $('pubDone').style.display='none'; $('pubGo').style.display=''; $('pub').classList.add('show'); };
 let pubCat='solo'; document.querySelectorAll('#pubCats button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#pubCats button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); pubCat=b.dataset.c; });
 $('pubCancel').onclick=()=>$('pub').classList.remove('show');
 $('pubGo').onclick=()=>{ const d=serialize(); d.name=$('pubName').value.trim().slice(0,24)||'My World'; d.author=$('pubAuthor').value.trim().slice(0,20); $('wname').value=d.name; try{ localStorage.setItem('bvstudio:author',d.author); }catch{}
-  const w={name:d.name,author:d.author,cat:pubCat,online:$('pubOnline').checked,ground:d.ground,blocks:d.blocks,pays:d.pays};
-  if(d.pays.length&&!d.author){ toast('Add your builder name so pay gates can pay you'); $('pubAuthor').focus(); return; }
+  const w={name:d.name,author:d.author,cat:pubCat,online:$('pubOnline').checked,ground:d.ground,blocks:d.blocks,pays:d.pays,shops:d.shops};
+  if((d.pays.length||d.shops.length)&&!d.author){ toast('Add your builder name so pay gates can pay you'); $('pubAuthor').focus(); return; }
   // 1) same-origin publish: the game reads this list directly
   try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
   // 2) share link: works for anyone, anywhere (and for the desktop app)
