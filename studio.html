@@ -338,7 +338,7 @@ $('pubGo').onclick=()=>{ const d=serialize(); d.name=$('pubName').value.trim().s
   const w={name:d.name,author:d.author,cat:pubCat,online:$('pubOnline').checked,ground:d.ground,blocks:d.blocks,pays:d.pays,shops:d.shops};
   if((d.pays.length||d.shops.length)&&!d.author){ toast('Add your builder name so pay gates can pay you'); $('pubAuthor').focus(); return; }
   // 1) same-origin publish: the game reads this list directly
-  try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
+  try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,mine:true,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
   // 2) share link: works for anyone, anywhere (and for the desktop app)
   const link=GAME_URL+'#world='+pubEncode(w); $('pubLink').value=link; $('pubGo').style.display='none'; $('pubDone').style.display='';
   $('pubPlay').onclick=()=>{ if(window.studio) window.open(link); else location.href=link; };
