@@ -320,7 +320,7 @@
 <!-- ============ HOME ============ -->
 <div id="home">
   <div id="topbar">
-    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span></div>
+    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v69</span></div>
     <button class="chip" id="chipBuy" style="border:0"><svg class="bux" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><span id="bitsTop">0</span><span style="opacity:.7;font-size:16px;line-height:1">+</span></button>
     <button id="avatarBtn" title="Account"><canvas id="avMini" width="72" height="72"></canvas></button>
   </div>
@@ -834,8 +834,8 @@ function cityRandomRoadPoint(){ const SZ=C.size, CELL=20, half=SZ/2; const lane=
 function newDelivery(){ if(C.pkg) scene.remove(C.pkg); if(C.dest) scene.remove(C.dest); let p=cityRandomRoadPoint(); while(p.distanceTo(P.pos)<25) p=cityRandomRoadPoint();
   C.pkg=cityMarker(0xffd23f); C.pkg.position.copy(p); const box=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),mat(0xc98b4a)); box.position.y=1.2; C.pkg.add(box); scene.add(C.pkg); C.dest=null; C.timer=0; cityHud(); }
 function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*2.237*1.6)+' mph'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
-function cityToggleCar(){ if(!C) return; if(C.inCar){ const car=C.inCar; C.inCar=null; const side=new THREE.Vector3(Math.cos(car.heading),0,-Math.sin(car.heading)).multiplyScalar(2.4); P.pos.copy(car.mesh.position).add(side); P.pos.y=2; P.vel.set(0,0,0); player.visible=true; document.getElementById('carBtn').textContent='🚗 Enter car'; cityHud(); return; }
-  if(C.near){ C.inCar=C.near; C.speed=0; C.cockpit=C.cockpit??true; player.visible=false; document.getElementById('carBtn').textContent='🚪 Get out'; cityHud(); toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','V / camera button switches view · Space brakes'); } }
+function cityToggleCar(){ if(!C) return; if(C.inCar){ const car=C.inCar; C.inCar=null; const side=new THREE.Vector3(Math.cos(car.heading),0,-Math.sin(car.heading)).multiplyScalar(2.4); P.pos.copy(car.mesh.position).add(side); P.pos.y=2; P.vel.set(0,0,0); player.visible=true; document.getElementById('carBtn').textContent='🚗 Enter car'; cityCamLabel(); cityHud(); return; }
+  if(C.near){ C.inCar=C.near; C.speed=0; C.cockpit=C.cockpit??true; player.visible=false; document.getElementById('carBtn').textContent='🚪 Get out'; cityCamLabel(); cityHud(); toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','V / camera button switches view · Space brakes'); } }
 function carBlocked(x,z){ const half=C.size/2; if(Math.abs(x)>half-2||Math.abs(z)>half-2) return true; for(const p of platforms){ if(!p.solid) continue; const m=p.mesh.position,s=p.size; if(Math.abs(x-m.x)<s.x/2+1.4&&Math.abs(z-m.z)<s.z/2+1.4) return true; } return false; }
 function updateCity(dt){ if(!C) return; C.msgT-=dt;
   // AI traffic drives along its lane and turns around at the edge
@@ -1199,7 +1199,8 @@ function cityCarCamera(){
     const camT=tmpV.set(car.position.x-Math.sin(yaw)*back, 3.4+Math.sin(camPitch)*2, car.position.z-Math.cos(yaw)*back);
     camera.position.lerp(camT,.18); const ahead=new THREE.Vector3(car.position.x+Math.sin(h)*4,1.4,car.position.z+Math.cos(h)*4); camera.lookAt(ahead); if(!freeLook) camYaw=h+Math.PI; return; }
 }
-function cityToggleView(){ if(!C||!C.inCar) return; C.cockpit=!C.cockpit; toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','press V or the camera button to switch'); }
+function cityToggleView(){ if(!C||!C.inCar) return; C.cockpit=!C.cockpit; cityCamLabel(); toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','press V or the camera button to switch'); }
+function cityCamLabel(){ const b=document.getElementById('camBtn'); if(C&&C.inCar) b.textContent=C.cockpit?'🚗 Driver':'🎥 Chase'; else b.textContent=acct.follow?'📷 Follow':'📷 Free'; }
 document.getElementById('carBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); cityToggleCar(); });
 function renderLoadout(){ loadoutEl.innerHTML=''; SLOTS.forEach((k,i)=>{ const w=loadout[k]; const b=document.createElement('button'); b.className='slot'+(i===slot?' on':''); b.dataset.i=i;
   b.innerHTML=`<span class="key">${i+1}</span>${w.emoji}<small>${k.slice(0,3).toUpperCase()}</small><div class="cd" style="height:0"></div>`; b.addEventListener('pointerdown',e=>{ stop(e); setSlot(i); }); loadoutEl.appendChild(b); }); }
@@ -1538,6 +1539,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{ look.id=e.pointerId; loo
 renderer.domElement.addEventListener('pointermove',e=>{ if(e.pointerId!==look.id) return; if(document.pointerLockElement===renderer.domElement) return; const sens=(scoped?.3:1)*(e.pointerType==='mouse'?SET.mouseSens:SET.touchSens); const iv=SET.invertY?-1:1; camYaw-=(e.clientX-look.lx)*.006*sens; if(G&&G.arena&&firstPerson) fpPitch=Math.max(-1.3,Math.min(1.3,fpPitch-(e.clientY-look.ly)*.004*sens*iv)); else camPitch=Math.min(1.2,Math.max(.1,camPitch+(e.clientY-look.ly)*.004*sens*iv)); look.lx=e.clientX; look.ly=e.clientY; });
 const lookEnd=e=>{ if(e.pointerId===look.id) look.id=null; };
 renderer.domElement.addEventListener('pointerup',lookEnd); renderer.domElement.addEventListener('pointercancel',lookEnd);
+document.getElementById('camBtn').addEventListener('pointerdown',e=>{ e.stopPropagation(); });
 document.getElementById('camBtn').onclick=()=>{ if(G&&G.city&&C&&C.inCar){ cityToggleView(); return; } if(G&&G.arena){ setFP(!firstPerson); return; } acct.follow=!acct.follow; document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; camModeBtn.textContent=acct.follow?'Follow player':'Free drag'; };
 
 // =============== GAME LOOP ===============
