@@ -1187,6 +1187,18 @@ document.getElementById('wpnBtn2').onclick=openWeaponSheet;
 addEventListener('keydown',e=>{ if(G&&G.arena&&running&&A&&A.roundOver&&e.code==='KeyB'&&!modal.classList.contains('show')) openWeaponSheet(); });
 addEventListener('keydown',e=>{ if(G&&G.city&&running&&e.code==='KeyE'&&!modal.classList.contains('show')) cityToggleCar(); });
 addEventListener('keydown',e=>{ if(G&&G.city&&running&&C&&C.inCar&&e.code==='KeyV') cityToggleView(); });
+function cityCarCamera(){
+  if(G.city&&C&&C.inCar&&C.cockpit){ // inside the car: driver's seat view
+    const car=C.inCar.mesh, h=C.inCar.heading; const freeLook=look.id!==null; const yaw=freeLook?camYaw:h; if(!freeLook){ camYaw=h; camPitch=Math.max(-.6,Math.min(.6,camPitch*.9)); }
+    const seat=tmpV.set(car.position.x+Math.sin(h)*-.2+Math.cos(h)*.45, 1.75, car.position.z+Math.cos(h)*-.2-Math.sin(h)*.45); // slightly left of centre
+    const shake=Math.abs(C.speed)>18?(Math.random()-.5)*.03:0; camera.position.lerp(seat,.6); camera.position.y+=shake;
+    const pitch=freeLook?camPitch:0; camera.lookAt(camera.position.x+Math.sin(yaw)*Math.cos(pitch)*10, camera.position.y-Math.sin(pitch)*10+.1, camera.position.z+Math.cos(yaw)*Math.cos(pitch)*10); return; }
+  if(G.city&&C&&C.inCar){ const car=C.inCar.mesh; const h=C.inCar.heading; const back=8+Math.min(5,Math.abs(C.speed)*.15); // pulls back a little at speed
+    const freeLook=look.id!==null; const yaw=freeLook?camYaw+Math.PI:h;
+    // camera sits behind the car's heading (heading points along -z after rotation, so "behind" is +sin/+cos)
+    const camT=tmpV.set(car.position.x-Math.sin(yaw)*back, 3.4+Math.sin(camPitch)*2, car.position.z-Math.cos(yaw)*back);
+    camera.position.lerp(camT,.18); const ahead=new THREE.Vector3(car.position.x+Math.sin(h)*4,1.4,car.position.z+Math.cos(h)*4); camera.lookAt(ahead); if(!freeLook) camYaw=h+Math.PI; return; }
+}
 function cityToggleView(){ if(!C||!C.inCar) return; C.cockpit=!C.cockpit; toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','press V or the camera button to switch'); }
 document.getElementById('carBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); cityToggleCar(); });
 function renderLoadout(){ loadoutEl.innerHTML=''; SLOTS.forEach((k,i)=>{ const w=loadout[k]; const b=document.createElement('button'); b.className='slot'+(i===slot?' on':''); b.dataset.i=i;
@@ -1537,7 +1549,7 @@ function die(){ if(G&&G.escape&&E){ E.speed=Math.max(E.base,E.speed-3); } if(G&&
 const clock=new THREE.Clock(); let running=false; const GRAV=-30; let JUMP=11.5; const tmpV=new THREE.Vector3();
 function update(dt){
   S.t+=dt;
-  if(G.city){ updateCity(dt); if(C.inCar){ return; } }
+  if(G.city){ updateCity(dt); if(C&&C.inCar){ cityCarCamera(); return; } }
   for(const p of platforms){ if(!p.moving) continue; const m=p.moving; p.base=p.base||p.mesh.position.clone(); const prev=p.mesh.position[m.axis]; p.mesh.position[m.axis]=p.base[m.axis]+Math.sin(S.t*m.speed+m.phase)*m.amp; p.delta=p.delta||new THREE.Vector3(); p.delta.set(0,0,0); p.delta[m.axis]=p.mesh.position[m.axis]-prev; }
   if(P.standing&&P.standing.delta) P.pos.add(P.standing.delta);
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
@@ -1563,16 +1575,6 @@ function update(dt){
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
   if(G.arena&&firstPerson){ player.visible=false; const eye=new THREE.Vector3(P.pos.x,P.pos.y+2.6,P.pos.z); if(A&&A.dash&&A.dash.slide) eye.y-=.9; camera.position.copy(eye); const dir=new THREE.Vector3(-Math.sin(camYaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(camYaw)*Math.cos(fpPitch)); camera.lookAt(eye.clone().add(dir)); return; }
   if(acct.follow&&look.id===null&&len>.05){ const target=Math.atan2(-move.x,-move.z); let d=target-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*2); }
-  if(G.city&&C&&C.inCar&&C.cockpit){ // inside the car: driver's seat view
-    const car=C.inCar.mesh, h=C.inCar.heading; const freeLook=look.id!==null; const yaw=freeLook?camYaw:h; if(!freeLook){ camYaw=h; camPitch=Math.max(-.6,Math.min(.6,camPitch*.9)); }
-    const seat=tmpV.set(car.position.x+Math.sin(h)*-.2+Math.cos(h)*.45, 1.75, car.position.z+Math.cos(h)*-.2-Math.sin(h)*.45); // slightly left of centre
-    const shake=Math.abs(C.speed)>18?(Math.random()-.5)*.03:0; camera.position.lerp(seat,.6); camera.position.y+=shake;
-    const pitch=freeLook?camPitch:0; camera.lookAt(camera.position.x+Math.sin(yaw)*Math.cos(pitch)*10, camera.position.y-Math.sin(pitch)*10+.1, camera.position.z+Math.cos(yaw)*Math.cos(pitch)*10); return; }
-  if(G.city&&C&&C.inCar){ const car=C.inCar.mesh; const h=C.inCar.heading; const back=8+Math.min(5,Math.abs(C.speed)*.15); // pulls back a little at speed
-    const freeLook=look.id!==null; const yaw=freeLook?camYaw+Math.PI:h;
-    // camera sits behind the car's heading (heading points along -z after rotation, so "behind" is +sin/+cos)
-    const camT=tmpV.set(car.position.x-Math.sin(yaw)*back, 3.4+Math.sin(camPitch)*2, car.position.z-Math.cos(yaw)*back);
-    camera.position.lerp(camT,.18); const ahead=new THREE.Vector3(car.position.x+Math.sin(h)*4,1.4,car.position.z+Math.cos(h)*4); camera.lookAt(ahead); if(!freeLook) camYaw=h+Math.PI; return; }
   let dist=(G.arena&&scoped)?5:11;
   if(G.studio){ // don't let the camera poke through walls/roofs — slide it toward the player until the view is clear
     const head=camRay.head.set(P.pos.x,P.pos.y+2,P.pos.z); const dir=camRay.dir.set(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
