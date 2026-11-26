@@ -190,7 +190,7 @@
   #login .pay{margin-top:4px}
   #login .alt{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;font-weight:700}
   #login .alt button{background:none;border:0;color:#157a56;font-weight:800;text-decoration:underline}
-  #login .or{display:flex;align-items:center;gap:10px;margin:12px 0 10px;color:var(--muted);font-size:12px;font-weight:800}
+  #login .or{display:flex;align-items:center;gap:10px;margin:12px 0 4px;color:var(--muted);font-size:12px;font-weight:800}
   #login .or:before,#login .or:after{content:'';flex:1;height:3px;background:#e3e7ef;border-radius:2px}
   #gBtn{display:flex;justify-content:center;min-height:44px}
   #login .guest{width:100%;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:10px;font-weight:800;margin-top:10px}
@@ -296,12 +296,12 @@
   <div class="card">
     <h1>Blockverse</h1>
     <div class="tag">Sign in to keep your Blockbux, items and stats</div>
+    <div id="gWrap" style="display:none"><div id="gBtn"></div><div class="or"><span>or use a username</span></div></div>
     <div class="f"><label>Username</label><input id="lgUser" maxlength="16" autocomplete="username" placeholder="3–16 letters, numbers or _"></div>
     <div class="f"><label>Password</label><input id="lgPass" type="password" autocomplete="current-password" placeholder="at least 4 characters"></div>
     <div class="err" id="lgErr"></div>
     <button class="pay" id="lgGo">Sign in</button>
     <div class="alt"><span id="lgSwitchTxt">New here?</span><button id="lgSwitch">Create an account</button></div>
-    <div id="gWrap" style="display:none"><div class="or"><span>or</span></div><div id="gBtn"></div></div>
     <button class="guest" id="lgGuest">Play as guest</button>
     <div class="copy">© 2026 Blockverse. All rights reserved.<br>Blockverse is an original game and is not affiliated with any other game or company.</div>
   </div>
@@ -376,6 +376,7 @@
       <h2>Account</h2>
       <div class="panel">
         <div class="row"><span class="lbl">Username</span><span class="val" id="nameShow">Guest</span></div>
+        <div class="row" id="gLinkRow" style="display:none"><span class="lbl">Google</span><span id="gLinkState" style="display:flex;align-items:center;gap:8px"><div id="gBtn2"></div></span></div>
         <div class="row"><span class="lbl">Signed in</span><button class="buy owned" id="signOut">Sign out</button></div>
         <div class="row"><span class="lbl">Blockbux</span><span class="val" id="bitsAcct">0</span></div>
         <div class="row"><span class="lbl">Coins collected</span><span class="val" id="statCoins">0</span></div>
@@ -566,7 +567,7 @@ async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?tok
 document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
 document.getElementById('modRefresh').onclick=refreshMod;
 document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
-function applyProfile(name,pr){ acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
+function applyProfile(name,pr){ googleLinked=!!(pr&&pr.googleLinked); setTimeout(refreshGoogleLink,0); acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
 function profileOut(){ return {settings:SET,boost:acct.boost||0,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
 function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
@@ -589,11 +590,17 @@ function hideLogin(){ document.getElementById('login').style.display='none'; }
 if(GOOGLE_CLIENT_ID&&ONLINE_URL){ const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.onload=()=>{ try{
     google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCred,ux_mode:'popup'});
     google.accounts.id.renderButton(document.getElementById('gBtn'),{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:280});
-    document.getElementById('gWrap').style.display=''; }catch(e){ console.warn('google sign-in unavailable',e); } }; document.head.appendChild(sc); }
+    document.getElementById('gWrap').style.display=''; googleReady=true; refreshGoogleLink(); }catch(e){ console.warn('google sign-in unavailable',e); } }; document.head.appendChild(sc); }
+let googleReady=false, googleLinked=false;
+function refreshGoogleLink(){ const row=document.getElementById('gLinkRow'); if(!googleReady||!authToken){ row.style.display='none'; return; } row.style.display='';
+  const st=document.getElementById('gLinkState'); if(googleLinked){ st.innerHTML='<span style="font-weight:800;color:#157a56">✅ Linked</span>'; return; }
+  st.innerHTML='<div id="gBtn2"></div>'; google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>onGoogleCred(r,{token:authToken,linkCurrent:true}),ux_mode:'popup'});
+  google.accounts.id.renderButton(document.getElementById('gBtn2'),{theme:'outline',size:'medium',shape:'pill',text:'continue_with',width:200}); }
 async function onGoogleCred(resp,extra){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…';
   try{ const r=await fetch(SERVER_HTTP+'/auth/google',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({credential:resp.credential,...(extra||{})})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
     if(d.needName){ askGoogleName(resp,d.suggest||''); return; }
-    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`,d.created?'Google is linked to your new account':d.linked?'Google is now linked to this account':''); }
+    googleLinked=true; if(extra&&extra.linkCurrent){ toast('✅ Google linked','You can now sign in with the Google button'); refreshGoogleLink(); lgErr.textContent=''; return; }
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); refreshGoogleLink(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`,d.created?'Google is linked to your new account':d.linked?'Google is now linked to this account':''); }
   catch(e){ lgErr.className='err'; lgErr.textContent=e.message; if(/username|password|taken|short/i.test(e.message)&&extra) askGoogleName(resp,extra.u||'',extra.link,e.message); } }
 function askGoogleName(resp,suggest,linkMode=false,errText=''){ const inp=v=>`style="width:100%;font:inherit;font-weight:800;font-size:16px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);margin-top:6px"`;
   sheet.innerHTML=`<h3>${linkMode?'Link Google to my account':'Create your Blockverse account'}</h3><div class="sub">${linkMode?'Sign in once with your username and password. After that, the Google button logs you straight in.':'Your Google account will be linked, so you can sign in with Google <b>or</b> with this username and password.'}</div>
