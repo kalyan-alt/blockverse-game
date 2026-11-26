@@ -590,14 +590,21 @@ if(GOOGLE_CLIENT_ID&&ONLINE_URL){ const sc=document.createElement('script'); sc.
     google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCred,ux_mode:'popup'});
     google.accounts.id.renderButton(document.getElementById('gBtn'),{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:280});
     document.getElementById('gWrap').style.display=''; }catch(e){ console.warn('google sign-in unavailable',e); } }; document.head.appendChild(sc); }
-async function onGoogleCred(resp,chosenName){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…';
-  try{ const r=await fetch(SERVER_HTTP+'/auth/google',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({credential:resp.credential,u:chosenName||undefined})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
+async function onGoogleCred(resp,extra){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…';
+  try{ const r=await fetch(SERVER_HTTP+'/auth/google',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({credential:resp.credential,...(extra||{})})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
     if(d.needName){ askGoogleName(resp,d.suggest||''); return; }
-    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`); }
-  catch(e){ lgErr.className='err'; lgErr.textContent=e.message; } }
-function askGoogleName(resp,suggest){ sheet.innerHTML=`<h3>Pick a username</h3><div class="sub">This is the name other players see. 3–16 letters, numbers or _</div><input id="gName" maxlength="16" value="${esc(suggest)}" style="width:100%;font:inherit;font-weight:800;font-size:16px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink)"><div class="err" id="gErr" style="margin-top:6px"></div><button class="buy" id="gOk">Create my account</button><button class="cancel" id="gCancel">Cancel</button>`;
-  const inp=sheet.querySelector('#gName'), err=sheet.querySelector('#gErr'); inp.focus(); inp.select();
-  sheet.querySelector('#gOk').onclick=()=>{ const u=inp.value.trim(); const prob=nameProblem(u); if(prob){ err.textContent=prob; return; } closeModal(); onGoogleCred(resp,u); };
+    authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`,d.created?'Google is linked to your new account':d.linked?'Google is now linked to this account':''); }
+  catch(e){ lgErr.className='err'; lgErr.textContent=e.message; if(/username|password|taken|short/i.test(e.message)&&extra) askGoogleName(resp,extra.u||'',extra.link,e.message); } }
+function askGoogleName(resp,suggest,linkMode=false,errText=''){ const inp=v=>`style="width:100%;font:inherit;font-weight:800;font-size:16px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);margin-top:6px"`;
+  sheet.innerHTML=`<h3>${linkMode?'Link Google to my account':'Create your Blockverse account'}</h3><div class="sub">${linkMode?'Sign in once with your username and password. After that, the Google button logs you straight in.':'Your Google account will be linked, so you can sign in with Google <b>or</b> with this username and password.'}</div>
+    <label style="font-size:12px;font-weight:800;display:block;margin-top:8px">Username<input id="gName" maxlength="16" value="${esc(suggest)}" placeholder="3–16 letters, numbers or _" ${inp()}></label>
+    <label style="font-size:12px;font-weight:800;display:block;margin-top:8px">Password<input id="gPass" type="password" maxlength="64" placeholder="${linkMode?'your account password':'at least 4 characters'}" ${inp()}></label>
+    <div class="err" id="gErr" style="margin-top:6px;min-height:16px">${esc(errText)}</div><button class="buy" id="gOk">${linkMode?'Link & sign in':'Create account'}</button>
+    <div class="alt" style="margin-top:8px"><span>${linkMode?'New here?':'Already have an account?'}</span><button id="gSwap">${linkMode?'Create a new account':'Link Google to it'}</button></div><button class="cancel" id="gCancel">Cancel</button>`;
+  const nameEl=sheet.querySelector('#gName'), passEl=sheet.querySelector('#gPass'), err=sheet.querySelector('#gErr'); nameEl.focus(); nameEl.select();
+  const go=()=>{ const u=nameEl.value.trim(), pw=passEl.value; if(!linkMode){ const prob=nameProblem(u); if(prob){ err.textContent=prob; return; } } else if(!u){ err.textContent='Enter your username'; return; } if(pw.length<4){ err.textContent='Password must be at least 4 characters'; return; } closeModal(); onGoogleCred(resp,{u,p:pw,link:linkMode}); };
+  sheet.querySelector('#gOk').onclick=go; passEl.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); });
+  sheet.querySelector('#gSwap').onclick=()=>askGoogleName(resp,linkMode?suggest:'',!linkMode);
   sheet.querySelector('#gCancel').onclick=()=>{ closeModal(); lgErr.className='err'; lgErr.textContent=''; }; modal.classList.add('show'); }
 document.getElementById('signOut').onclick=()=>{ saveProfile(); authToken=null; store.del('bv_token'); location.reload(); };
 (async function restoreSession(){ const t=store.get('bv_token'); if(!t||!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/profile?token='+encodeURIComponent(t)); if(!r.ok) throw 0; const d=await r.json(); if(d.error) throw 0; authToken=t; applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); }catch{ store.del('bv_token'); } })();
