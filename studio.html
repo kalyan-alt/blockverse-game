@@ -309,8 +309,12 @@ cv.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; 
   let t=tool; if(d.b===2) t='erase'; else if(d.b===1) t='pick'; begin(); applyTool(h,t); commit(); });
 cv.addEventListener('wheel',e=>{ e.preventDefault(); orbit.dist=Math.max(6,Math.min(160,orbit.dist*(1+Math.sign(e.deltaY)*.1))); },{passive:false});
 // pinch
-cv.addEventListener('touchmove',e=>{ if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); if(touchDist) orbit.dist=Math.max(6,Math.min(160,orbit.dist*(touchDist/d))); touchDist=d; drag=null; } },{passive:true});
-cv.addEventListener('touchend',()=>{ touchDist=0; });
+let touchMid=null;
+cv.addEventListener('touchmove',e=>{ if(e.touches.length===2){ const [a,b]=e.touches; const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); const mx=(a.clientX+b.clientX)/2, my=(a.clientY+b.clientY)/2;
+    if(touchDist) orbit.dist=Math.max(6,Math.min(160,orbit.dist*(touchDist/d)));
+    if(touchMid){ const s=orbit.dist*.0022; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw)); orbit.target.addScaledVector(right,-(mx-touchMid.x)*s).addScaledVector(fwd,-(my-touchMid.y)*s); } // two-finger drag = pan
+    touchDist=d; touchMid={x:mx,y:my}; drag=null; ghost.visible=false; } },{passive:true});
+cv.addEventListener('touchend',e=>{ if(e.touches.length<2){ touchDist=0; touchMid=null; } });
 function hover(h){ if(showAvatar&&h){ const [ax,ay,az]=cellFromHit(h,true); avatarRef.position.set(ax+.5,h.object.userData.ground?0:ay,az+.5); }
   if(stamp){ ghost.visible=false; if(h){ const [x,y,z]=cellFromHit(h,true); showStamp(x,h.object.userData.ground?0:y,z); } else stampGroup.visible=false; return; }
   if(!h||(tool!=='build'&&h.object.userData.ground)){ ghost.visible=false; return; } const [x,y,z]=cellFromHit(h,tool==='build'); ghost.position.set(x+.5,y+.5,z+.5); ghost.scale.setScalar(brush*2-1); ghostMat.color.set(tool==='erase'?0xff4b3a:tool==='paint'?BLOCKS[cur].c:BLOCKS[cur].c); ghost.visible=true; }
@@ -398,7 +402,7 @@ function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last
   if(keys.KeyW) orbit.target.addScaledVector(fwd,sp); if(keys.KeyS) orbit.target.addScaledVector(fwd,-sp); if(keys.KeyA) orbit.target.addScaledVector(right,-sp); if(keys.KeyD) orbit.target.addScaledVector(right,sp);
   const cp=Math.cos(orbit.pitch); camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*cp*orbit.dist, orbit.target.y+Math.sin(orbit.pitch)*orbit.dist, orbit.target.z+Math.cos(orbit.yaw)*cp*orbit.dist); camera.lookAt(orbit.target);
   renderer.render(scene,camera); }
-renderPal(); renderBld(); setTool('build'); hud(); requestAnimationFrame(loop); if(IS_TOUCH) setTimeout(()=>toast('Swipe in from the right edge for blocks & tools'),900);
+renderPal(); renderBld(); setTool('build'); hud(); requestAnimationFrame(loop); if(IS_TOUCH) setTimeout(()=>toast('1 finger: orbit · 2 fingers: move & zoom · swipe from right edge: blocks'),900);
 </script>
 </body>
 </html>

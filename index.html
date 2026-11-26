@@ -98,6 +98,12 @@
   #knob{position:absolute;left:47px;top:47px;width:56px;height:56px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
   #jump{position:fixed;right:22px;bottom:calc(34px + env(safe-area-inset-bottom));width:104px;height:104px;border-radius:50%;background:var(--sun);border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:18px}
   #jump.down{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+  #dash{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:6;display:flex;align-items:center;gap:12px;background:#1d2433ee;color:#fff;border:3px solid #fff;border-radius:18px;padding:8px 16px;box-shadow:0 4px 0 #000a;pointer-events:none}
+  #dash .spd{display:flex;align-items:baseline;gap:4px} #dash .spd b{font-size:34px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;min-width:62px;text-align:right} #dash .spd span{font-size:11px;font-weight:800;color:#8fd3ff}
+  #dash .gear{width:34px;height:34px;border-radius:10px;background:#fff;color:#1d2433;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px}
+  #dash .job{font-size:12px;font-weight:800;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.console #dash{filter:grayscale(1)}
+  @media(max-width:560px){ #dash{padding:6px 12px;gap:8px} #dash .spd b{font-size:26px;min-width:48px} #dash .job{display:none} }
   #carBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom));z-index:6;background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:10px 18px;font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--ink)}
   body.console #carBtn{background:#fff;border-width:4px;filter:grayscale(1)}
   #camBtn{position:fixed;right:22px;bottom:calc(236px + env(safe-area-inset-bottom));background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
@@ -456,6 +462,7 @@
   <button id="fire">FIRE</button>
   <button id="jump">JUMP</button>
   <button id="carBtn" style="display:none">🚗 Enter car</button>
+  <div id="dash" style="display:none"><div class="spd"><b id="dashMph">0</b><span>MPH</span></div><div class="gear" id="dashGear">D</div><div class="job" id="dashJob">📦 find a package</div></div>
   <div id="conBar"><span><b>L</b>Move</span><span><b>Drag</b>Look</span><span><b>A</b>Jump</span><span id="conFire" style="display:none"><b>ZR</b>Fire</span><span><b>+</b>Menu</span></div>
   <div id="xhair"></div>
 </div>
@@ -826,7 +833,7 @@ function cityMarker(color){ const g=new THREE.Group(); const ring=new THREE.Mesh
 function cityRandomRoadPoint(){ const SZ=C.size, CELL=20, half=SZ/2; const lane=Math.floor(Math.random()*(SZ/CELL))*CELL-half+CELL/2; const along=(Math.random()-.5)*(SZ-24); return Math.random()<.5?new THREE.Vector3(lane,0,along):new THREE.Vector3(along,0,lane); }
 function newDelivery(){ if(C.pkg) scene.remove(C.pkg); if(C.dest) scene.remove(C.dest); let p=cityRandomRoadPoint(); while(p.distanceTo(P.pos)<25) p=cityRandomRoadPoint();
   C.pkg=cityMarker(0xffd23f); C.pkg.position.copy(p); const box=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),mat(0xc98b4a)); box.position.y=1.2; C.pkg.add(box); scene.add(C.pkg); C.dest=null; C.timer=0; cityHud(); }
-function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*3)+' km/h'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
+function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*2.237*1.6)+' mph'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
 function cityToggleCar(){ if(!C) return; if(C.inCar){ const car=C.inCar; C.inCar=null; const side=new THREE.Vector3(Math.cos(car.heading),0,-Math.sin(car.heading)).multiplyScalar(2.4); P.pos.copy(car.mesh.position).add(side); P.pos.y=2; P.vel.set(0,0,0); player.visible=true; document.getElementById('carBtn').textContent='🚗 Enter car'; cityHud(); return; }
   if(C.near){ C.inCar=C.near; C.speed=0; player.visible=false; document.getElementById('carBtn').textContent='🚪 Get out'; cityHud(); } }
 function carBlocked(x,z){ const half=C.size/2; if(Math.abs(x)>half-2||Math.abs(z)>half-2) return true; for(const p of platforms){ if(!p.solid) continue; const m=p.mesh.position,s=p.size; if(Math.abs(x-m.x)<s.x/2+1.4&&Math.abs(z-m.z)<s.z/2+1.4) return true; } return false; }
@@ -840,13 +847,13 @@ function updateCity(dt){ if(!C) return; C.msgT-=dt;
     const nx=car.mesh.position.x-Math.sin(car.heading)*C.speed*dt*-1, nz=car.mesh.position.z-Math.cos(car.heading)*C.speed*dt*-1;
     if(carBlocked(nx,nz)){ C.speed*=-.3; } else { car.mesh.position.x=nx; car.mesh.position.z=nz; } car.mesh.rotation.y=car.heading;
     P.pos.set(car.mesh.position.x,2,car.mesh.position.z); P.vel.set(0,0,0); P.onGround=true;
-    if(look.id===null&&Math.abs(C.speed)>1){ let d=car.heading-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*3); }
     jumpQueued=false; }
   else { C.near=null; let best=6; for(const c of C.cars){ const d=c.mesh.position.distanceTo(P.pos); if(d<best){ best=d; C.near=c; } } document.getElementById('carBtn').style.display=C.near?'':'none'; }
   // deliveries
   if(C.pkg&&!C.dest&&C.pkg.position.distanceTo(P.pos)<3){ scene.remove(C.pkg); C.pkg=null; let d=cityRandomRoadPoint(); while(d.distanceTo(P.pos)<40) d=cityRandomRoadPoint(); C.dest=cityMarker(0x3ad39a); C.dest.position.copy(d); scene.add(C.dest); C.timer=Math.max(25,d.distanceTo(P.pos)/9+15); toast('📦 Got the package!','Drive to the green marker — '+Math.ceil(C.timer)+'s'); }
   if(C.dest){ C.timer-=dt; if(C.dest.position.distanceTo(P.pos)<3.5){ const pay=Math.max(3,Math.round(C.timer/3)+5); acct.bits+=pay; C.earned+=pay; C.deliveries++; fmtBits(); markDirty(); scene.remove(C.dest); C.dest=null; toast('✅ Delivered! +'+pay+' Blockbux',C.deliveries+' deliveries so far'); setTimeout(()=>{ if(C) newDelivery(); },1500); }
     else if(C.timer<=0){ scene.remove(C.dest); C.dest=null; toast('⏰ Too slow!','package expired — grab the next one'); setTimeout(()=>{ if(C) newDelivery(); },1500); } }
+  const dash=document.getElementById('dash'); if(C.inCar){ dash.style.display='flex'; document.getElementById('dashMph').textContent=Math.round(Math.abs(C.speed)*2.237*1.6); document.getElementById('dashGear').textContent=C.speed<-.5?'R':(keys.Space||jumpHeld)?'B':'D'; document.getElementById('dashJob').textContent=C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 find the yellow package'; } else dash.style.display='none';
   if(C.msgT<=0){ C.msgT=.25; cityHud(); }
   if(C.pkg){ C.pkg.rotation.y+=dt; C.pkg.children[2].position.y=1.2+Math.sin(S.t*3)*.2; } if(C.dest) C.dest.rotation.y+=dt; }
 // ---------- Studio Worlds (published from Blockverse Studio) ----------
@@ -1554,6 +1561,11 @@ function update(dt){
   const run=len>.05&&P.onGround?Math.sin(S.t*14)*.7:(P.onGround?0:.4); player.legL.rotation.x=run; player.legR.rotation.x=-run; player.armL.rotation.x=-run; if(!(G.arena&&A&&A.swing>0)) player.armR.rotation.x=run;
   if(G.arena&&firstPerson){ player.visible=false; const eye=new THREE.Vector3(P.pos.x,P.pos.y+2.6,P.pos.z); if(A&&A.dash&&A.dash.slide) eye.y-=.9; camera.position.copy(eye); const dir=new THREE.Vector3(-Math.sin(camYaw)*Math.cos(fpPitch),Math.sin(fpPitch),-Math.cos(camYaw)*Math.cos(fpPitch)); camera.lookAt(eye.clone().add(dir)); return; }
   if(acct.follow&&look.id===null&&len>.05){ const target=Math.atan2(-move.x,-move.z); let d=target-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*2); }
+  if(G.city&&C&&C.inCar){ const car=C.inCar.mesh; const h=C.inCar.heading; const back=8+Math.min(5,Math.abs(C.speed)*.15); // pulls back a little at speed
+    const freeLook=look.id!==null; const yaw=freeLook?camYaw+Math.PI:h;
+    // camera sits behind the car's heading (heading points along -z after rotation, so "behind" is +sin/+cos)
+    const camT=tmpV.set(car.position.x-Math.sin(yaw)*back, 3.4+Math.sin(camPitch)*2, car.position.z-Math.cos(yaw)*back);
+    camera.position.lerp(camT,.18); const ahead=new THREE.Vector3(car.position.x+Math.sin(h)*4,1.4,car.position.z+Math.cos(h)*4); camera.lookAt(ahead); if(!freeLook) camYaw=h+Math.PI; return; }
   let dist=(G.arena&&scoped)?5:11;
   if(G.studio){ // don't let the camera poke through walls/roofs — slide it toward the player until the view is clear
     const head=camRay.head.set(P.pos.x,P.pos.y+2,P.pos.z); const dir=camRay.dir.set(Math.sin(camYaw)*Math.cos(camPitch),Math.sin(camPitch),Math.cos(camYaw)*Math.cos(camPitch));
@@ -1587,7 +1599,7 @@ function startGame(g){ document.body.classList.add('ingame'); document.body.clas
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ document.body.classList.remove('ingame','arena'); document.getElementById('carBtn').style.display='none'; C=null; running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ document.body.classList.remove('ingame','arena'); document.getElementById('carBtn').style.display='none'; document.getElementById('dash').style.display='none'; C=null; running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
