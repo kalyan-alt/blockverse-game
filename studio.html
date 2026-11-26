@@ -52,23 +52,30 @@
   .rng input{flex:1}
   .help{font-size:11px;color:var(--muted);font-weight:700;line-height:1.5}
   #mobileBar{display:none}
-  #mTabs,#mSheet{display:none}
+  #mTabs,#mSheet,#edgeTab,#scrim{display:none}
   @media(max-width:900px),(pointer:coarse){
-    #app{grid-template-columns:1fr 92px;grid-template-rows:52px 1fr}
+    #app{grid-template-columns:1fr;grid-template-rows:52px 1fr}
+    aside{position:fixed;top:52px;right:0;bottom:0;width:150px;z-index:25;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 0 #1d243322}
+    aside.open{transform:translateX(0)}
+    #edgeTab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:24;background:var(--ink);color:#fff;border-radius:12px 0 0 12px;padding:14px 6px;font-weight:900;font-size:14px;writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:1px;box-shadow:-3px 0 0 #0004;display:flex;align-items:center;gap:6px}
+    #edgeTab i{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid #fff}
+    aside.open~#edgeTab{display:none}
+    #scrim{position:fixed;inset:0;top:52px;z-index:23;display:none;background:transparent}
+    aside.open~#scrim{display:block}
     header h1{font-size:15px} header input{width:100px;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
     aside{padding:6px;gap:8px;border-left:3px solid var(--ink);background:var(--card);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
     aside::-webkit-scrollbar{display:none}
     aside .panel{padding:6px;border-width:3px;box-shadow:0 2px 0 var(--ink)}
     aside .lbl{font-size:11px;margin-bottom:5px} aside .lbl small{display:none}
     /* tools: one column of big icon buttons */
-    .tools{grid-template-columns:1fr;gap:5px} .tools button{padding:9px 2px;font-size:12px;min-height:40px} .tools .k{display:none}
+    .tools{grid-template-columns:1fr 1fr;gap:5px} .tools button{padding:9px 2px;font-size:12px;min-height:40px} .tools .k{display:none}
     #pTools .rng{flex-direction:column;align-items:stretch;gap:2px;font-size:10px} #pTools .rng input{width:100%;margin:0}
     /* blocks: two columns on the right rail */
-    .pal{grid-template-columns:1fr 1fr;gap:5px} .pal button{border-width:2px;border-radius:8px;box-shadow:0 2px 0 var(--ink)} .pal button i{border-radius:5px}
+    .pal{grid-template-columns:1fr 1fr 1fr;gap:5px} .pal button{border-width:2px;border-radius:8px;box-shadow:0 2px 0 var(--ink)} .pal button i{border-radius:5px}
     #payRow,#shopRow{font-size:10px} #payRow input,#shopRow input{width:100%!important}
     /* buildings / world / help move into a slide-up sheet */
     #pBld,#pWorld,#pHelp{display:none}
-    #mTabs{display:grid;grid-template-columns:1fr;gap:5px;margin-top:auto}
+    #mTabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:auto}
     #mTabs button{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 2px;font-weight:800;font-size:16px;box-shadow:0 2px 0 var(--ink);display:flex;flex-direction:column;align-items:center}
     #mTabs button small{font-size:9px;color:var(--muted)}
     #mSheet{position:fixed;inset:0;background:#1d2433aa;z-index:30;align-items:flex-end;justify-content:center}
@@ -82,9 +89,6 @@
     #mobileBar{display:none!important}
     #hud{font-size:11px;padding:4px 8px}
     #toast{font-size:12px}
-  }
-  @media(max-width:900px) and (orientation:portrait),(pointer:coarse) and (orientation:portrait){
-    #app{grid-template-columns:1fr 84px}
   }
   #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;color:#fff;font-weight:900;font-size:22px}
   #drop.show{display:flex}
@@ -151,6 +155,7 @@
     </div>
     <div id="mTabs"><button data-p="pBld">🏠<small>Build</small></button><button data-p="pWorld">⚙<small>World</small></button><button data-p="pHelp">❔<small>Help</small></button></div>
   </aside>
+  <div id="edgeTab" title="Blocks"><i></i>Blocks</div><div id="scrim"></div>
   <div id="mSheet"><div class="mSheetIn"><div class="mSheetHead"><b id="mSheetTitle"></b><button id="mSheetClose">✕</button></div><div id="mSheetBody"></div></div></div>
 </div>
 
@@ -293,7 +298,7 @@ function brushAt(x,y,z,fn){ const r=brush-1; for(let dx=-r;dx<=r;dx++)for(let dy
 const cv=renderer.domElement; let drag=null, moved=false, touchDist=0;
 const keys={};
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); moved=false; drag={x:e.clientX,y:e.clientY,b:e.button,shift:e.shiftKey,t:performance.now(),touch:e.pointerType==='touch'}; });
+cv.addEventListener('pointerdown',e=>{ if(e.pointerType==='touch'&&innerWidth-e.clientX<28){ drag=null; return; } cv.setPointerCapture(e.pointerId); moved=false; drag={x:e.clientX,y:e.clientY,b:e.button,shift:e.shiftKey,t:performance.now(),touch:e.pointerType==='touch'}; });
 cv.addEventListener('pointermove',e=>{ if(drag){ const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.hypot(dx,dy)>4) moved=true;
     if(drag.b===2||drag.shift){ const s=orbit.dist*.0016; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw)); orbit.target.addScaledVector(right,-dx*s).addScaledVector(fwd,-dy*s); }
     else { orbit.yaw-=dx*.006; orbit.pitch=Math.max(.05,Math.min(1.5,orbit.pitch+dy*.006)); }
@@ -327,10 +332,17 @@ $('rotL').onclick=()=>{ stampRot=(stampRot+3)%4; }; $('rotR').onclick=()=>{ stam
 const mSheet=$('mSheet'), mBody=$('mSheetBody'); let sheetPanel=null;
 function openSheet(id){ closeSheet(); const pnl=$(id); sheetPanel={el:pnl,parent:pnl.parentNode,next:pnl.nextSibling}; $('mSheetTitle').textContent=pnl.querySelector('.lbl').firstChild.textContent.trim(); mBody.appendChild(pnl); mSheet.classList.add('show'); }
 function closeSheet(){ if(!sheetPanel) return; sheetPanel.parent.insertBefore(sheetPanel.el,sheetPanel.next); sheetPanel=null; mSheet.classList.remove('show'); }
-document.querySelectorAll('#mTabs button').forEach(b=>b.onclick=()=>openSheet(b.dataset.p)); $('mSheetClose').onclick=closeSheet; mSheet.addEventListener('pointerdown',e=>{ if(e.target===mSheet) closeSheet(); });
+document.querySelectorAll('#mTabs button').forEach(b=>b.onclick=()=>{ closeDrawer(); openSheet(b.dataset.p); }); $('mSheetClose').onclick=closeSheet; mSheet.addEventListener('pointerdown',e=>{ if(e.target===mSheet) closeSheet(); });
 const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
+// ---- right-edge drawer: swipe in from the right edge to open the block menu, swipe right (or tap outside) to close ----
+const aside=document.querySelector('aside'); const openDrawer=()=>aside.classList.add('open'); const closeDrawer=()=>aside.classList.remove('open');
+$('edgeTab').onclick=openDrawer; $('scrim').onclick=closeDrawer;
+let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; const fromEdge=innerWidth-t.clientX; if(!aside.classList.contains('open')&&fromEdge<28) sw={x:t.clientX,y:t.clientY,mode:'open'}; else if(aside.classList.contains('open')&&aside.contains(e.target)) sw={x:t.clientX,y:t.clientY,mode:'close'}; else sw=null; },{passive:true});
+addEventListener('touchmove',e=>{ if(!sw) return; const t=e.touches[0]; const dx=t.clientX-sw.x, dy=t.clientY-sw.y; if(Math.abs(dy)>Math.abs(dx)*1.3) return; if(sw.mode==='open'&&dx<-40){ openDrawer(); sw=null; } else if(sw.mode==='close'&&dx>50){ closeDrawer(); sw=null; } },{passive:true});
+addEventListener('touchend',()=>{ sw=null; });
+
 // =============== UI RENDER ===============
-function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; }
+function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); if(IS_TOUCH&&!BLOCKS[i].pay&&!BLOCKS[i].counter) closeDrawer(); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; }
 function renderBld(){ $('rotQuick').style.display=stamp?'flex':'none'; const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast(IS_TOUCH?'Tap the ground to place it':'Click the ground to place · R rotates · Shift keeps stamping'); if(mSheet.classList.contains('show')) closeSheet(); } renderBld(); }; el.appendChild(btn); }); }
 function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
@@ -386,7 +398,7 @@ function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last
   if(keys.KeyW) orbit.target.addScaledVector(fwd,sp); if(keys.KeyS) orbit.target.addScaledVector(fwd,-sp); if(keys.KeyA) orbit.target.addScaledVector(right,-sp); if(keys.KeyD) orbit.target.addScaledVector(right,sp);
   const cp=Math.cos(orbit.pitch); camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*cp*orbit.dist, orbit.target.y+Math.sin(orbit.pitch)*orbit.dist, orbit.target.z+Math.cos(orbit.yaw)*cp*orbit.dist); camera.lookAt(orbit.target);
   renderer.render(scene,camera); }
-renderPal(); renderBld(); setTool('build'); hud(); requestAnimationFrame(loop);
+renderPal(); renderBld(); setTool('build'); hud(); requestAnimationFrame(loop); if(IS_TOUCH) setTimeout(()=>toast('Swipe in from the right edge for blocks & tools'),900);
 </script>
 </body>
 </html>
