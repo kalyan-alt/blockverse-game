@@ -52,28 +52,40 @@
   .rng input{flex:1}
   .help{font-size:11px;color:var(--muted);font-weight:700;line-height:1.5}
   #mobileBar{display:none}
-  @media(max-width:760px){
-    #app{grid-template-columns:1fr;grid-template-rows:52px 1fr auto}
-    aside{border-left:0;border-top:3px solid var(--ink);max-height:38vh;flex-direction:row;flex-wrap:nowrap;overflow-x:auto}
-    aside .panel{min-width:230px;flex:none}
-    header input{width:110px}
-    #mobileBar{display:flex;position:absolute;right:10px;bottom:10px;gap:6px}
-    #mobileBar button{width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-size:18px;font-weight:900}
-    #mobileBar button.on{background:var(--sun)}
+  #mTabs,#mSheet{display:none}
+  @media(max-width:900px),(pointer:coarse){
+    #app{grid-template-columns:1fr 92px;grid-template-rows:52px 1fr}
+    header h1{font-size:15px} header input{width:100px;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
+    aside{padding:6px;gap:8px;border-left:3px solid var(--ink);background:var(--card);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+    aside::-webkit-scrollbar{display:none}
+    aside .panel{padding:6px;border-width:3px;box-shadow:0 2px 0 var(--ink)}
+    aside .lbl{font-size:11px;margin-bottom:5px} aside .lbl small{display:none}
+    /* tools: one column of big icon buttons */
+    .tools{grid-template-columns:1fr;gap:5px} .tools button{padding:9px 2px;font-size:12px;min-height:40px} .tools .k{display:none}
+    #pTools .rng{flex-direction:column;align-items:stretch;gap:2px;font-size:10px} #pTools .rng input{width:100%;margin:0}
+    /* blocks: two columns on the right rail */
+    .pal{grid-template-columns:1fr 1fr;gap:5px} .pal button{border-width:2px;border-radius:8px;box-shadow:0 2px 0 var(--ink)} .pal button i{border-radius:5px}
+    #payRow,#shopRow{font-size:10px} #payRow input,#shopRow input{width:100%!important}
+    /* buildings / world / help move into a slide-up sheet */
+    #pBld,#pWorld,#pHelp{display:none}
+    #mTabs{display:grid;grid-template-columns:1fr;gap:5px;margin-top:auto}
+    #mTabs button{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 2px;font-weight:800;font-size:16px;box-shadow:0 2px 0 var(--ink);display:flex;flex-direction:column;align-items:center}
+    #mTabs button small{font-size:9px;color:var(--muted)}
+    #mSheet{position:fixed;inset:0;background:#1d2433aa;z-index:30;align-items:flex-end;justify-content:center}
+    #mSheet.show{display:flex}
+    .mSheetIn{background:var(--card);border:4px solid var(--ink);border-bottom:0;border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:70vh;overflow:auto;padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+    .mSheetHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:16px}
+    .mSheetHead button{background:#fff;border:3px solid var(--ink);border-radius:10px;width:36px;height:36px;font-weight:900}
+    #mSheetBody .panel{display:block;border:0;box-shadow:none;padding:0;background:none}
+    #mSheetBody .bld{grid-template-columns:repeat(3,1fr)} #mSheetBody .bld button{min-height:64px}
+    #mSheetBody .row button{padding:10px}
+    #mobileBar{display:none!important}
+    #hud{font-size:11px;padding:4px 8px}
+    #toast{font-size:12px}
   }
-  #pub{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;padding:16px}
-  #pub.show{display:flex}
-  .pubCard{background:var(--card);border:4px solid var(--ink);border-radius:18px;padding:18px;width:min(420px,100%);box-shadow:0 8px 0 var(--ink)}
-  .pubCard h2{font-size:20px;font-weight:900;margin-bottom:6px}
-  .pubSub{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:12px}
-  .pubL{display:block;font-size:12px;font-weight:800;margin-top:8px}
-  .pubL input,#pubLink{display:block;width:100%;margin-top:4px;font:inherit;font-weight:700;font-size:14px;padding:8px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);outline:0;user-select:text;-webkit-user-select:text}
-  .pubCats{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
-  .pubCats button{flex:1;min-width:80px;background:#fff;border:3px solid #cfd6e3;border-radius:10px;padding:7px 4px;font-weight:800;font-size:12px}
-  .pubCats button.on{border-color:var(--ink);background:var(--sun);box-shadow:0 3px 0 var(--ink)}
-  .pubChk{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin-top:10px}
-  .pubChk input{width:18px;height:18px}
-  .pubOk{font-weight:900;font-size:16px;color:#157a56;margin:10px 0 6px}
+  @media(max-width:900px) and (orientation:portrait),(pointer:coarse) and (orientation:portrait){
+    #app{grid-template-columns:1fr 84px}
+  }
   #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;color:#fff;font-weight:900;font-size:22px}
   #drop.show{display:flex}
 </style>
@@ -93,6 +105,7 @@
   <div id="view">
     <div id="hud">0 blocks</div>
     <div id="toast"></div>
+    <div id="rotQuick" style="display:none;position:absolute;left:10px;top:10px;gap:6px"><button id="rotQ" style="background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 14px;font-weight:900;box-shadow:0 3px 0 var(--ink)">↻ Rotate</button><button id="rotX" style="background:#ffe4e1;border:3px solid var(--ink);border-radius:999px;padding:8px 14px;font-weight:900;box-shadow:0 3px 0 var(--ink)">✕</button></div>
     <div id="mobileBar"><button id="mBuild" class="on" title="Build">+</button><button id="mErase" title="Erase">−</button><button id="mPaint" title="Paint">🖌</button></div>
     <div id="pub"><div class="pubCard"><h2>🚀 Publish to Blockverse</h2><div class="pubSub">Your world goes straight into the <b>Studio Worlds</b> game. Anyone with the share link can play it too.</div>
       <label class="pubL">World name<input id="pubName" maxlength="24"></label><label class="pubL">Builder name<input id="pubAuthor" maxlength="20" placeholder="e.g. Blocky"></label>
@@ -104,7 +117,7 @@
     <div id="drop">Drop a .bvw world file to open it</div>
   </div>
   <aside>
-    <div class="panel">
+    <div class="panel" id="pTools">
       <div class="lbl">Tools <small>1–4</small></div>
       <div class="tools">
         <button data-t="build" class="on">Build<span class="k">1 · L-click</span></button>
@@ -114,29 +127,31 @@
       </div>
       <div class="rng" style="margin-top:10px">Brush <input type="range" id="brush" min="1" max="4" value="1"><b id="brushV">1</b></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="pBlocks">
       <div class="lbl">Blocks <small>Q / E to cycle</small></div>
       <div class="pal" id="pal"></div>
       <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <input type="number" id="shopPrice" min="1" max="999" value="25" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
       <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <input type="number" id="payPrice" min="1" max="999" value="10" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="pBld">
       <div class="lbl">Buildings <small>click to stamp</small></div>
       <div class="bld" id="bld"></div>
       <div class="row" style="margin-top:8px"><button id="rotL">↺ Rotate</button><button id="rotR">↻ Rotate</button></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="pWorld">
       <div class="lbl">World</div>
       <div class="rng">Ground <input type="range" id="gsize" min="16" max="96" step="8" value="48"><b id="gsizeV">48</b></div>
       <div class="row" style="margin-top:8px"><button id="bAvatar">🧍 Show avatar size</button></div>
       <div class="row" style="margin-top:8px"><button id="bUndo">↶ Undo</button><button id="bRedo">↷ Redo</button></div>
       <div class="row" style="margin-top:6px"><button id="bShot">📷 Snapshot</button><button id="bClear" class="warn">Clear all</button></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="pHelp">
       <div class="lbl">Controls</div>
       <div class="help">Drag to orbit · scroll to zoom · right-drag or WASD to pan · Shift+drag to pan<br>Ctrl+Z / Ctrl+Y undo & redo · Ctrl+S save · Esc cancels a building<br>Worlds save as <b>.bvw</b> files and in this browser.</div>
     </div>
+    <div id="mTabs"><button data-p="pBld">🏠<small>Build</small></button><button data-p="pWorld">⚙<small>World</small></button><button data-p="pHelp">❔<small>Help</small></button></div>
   </aside>
+  <div id="mSheet"><div class="mSheetIn"><div class="mSheetHead"><b id="mSheetTitle"></b><button id="mSheetClose">✕</button></div><div id="mSheetBody"></div></div></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -228,12 +243,12 @@ const $=id=>document.getElementById(id);
 
 // =============== THREE ===============
 const view=$('view');
-const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=true; view.prepend(renderer.domElement);
+const TOUCH0=matchMedia('(pointer:coarse)').matches; const renderer=new THREE.WebGLRenderer({antialias:!TOUCH0,preserveDrawingBuffer:true,powerPreference:'high-performance'}); renderer.setPixelRatio(Math.min(devicePixelRatio,TOUCH0?1.5:2)); renderer.shadowMap.enabled=!TOUCH0; view.prepend(renderer.domElement);
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8fd3ff); scene.fog=new THREE.Fog(0x8fd3ff,80,200);
 const camera=new THREE.PerspectiveCamera(55,1,.1,500);
 const orbit={yaw:.8,pitch:.6,dist:40,target:new THREE.Vector3(0,2,0)};
 scene.add(new THREE.HemisphereLight(0xffffff,0x7a8aa8,.9));
-const sun=new THREE.DirectionalLight(0xfff2cc,.9); sun.position.set(30,60,20); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); const sc=sun.shadow.camera; sc.left=sc.bottom=-70; sc.right=sc.top=70; sc.far=200; scene.add(sun);
+const sun=new THREE.DirectionalLight(0xfff2cc,.9); sun.position.set(30,60,20); sun.castShadow=true; sun.shadow.mapSize.set(TOUCH0?1024:2048,2048); const sc=sun.shadow.camera; sc.left=sc.bottom=-70; sc.right=sc.top=70; sc.far=200; scene.add(sun);
 
 let groundMesh, gridHelper;
 function buildGround(){ if(groundMesh){ scene.remove(groundMesh); scene.remove(gridHelper); }
@@ -285,7 +300,7 @@ cv.addEventListener('pointermove',e=>{ if(drag){ const dx=e.clientX-drag.x, dy=e
     drag.x=e.clientX; drag.y=e.clientY; }
   const h=hit(e.clientX,e.clientY); hover(h); });
 cv.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; if(moved) return; const h=hit(e.clientX,e.clientY);
-  if(stamp){ if(h){ const [x,y,z]=cellFromHit(h,true); const oy=h.object.userData.ground?0:y; begin(); for(const [bx,by,bz,bi] of stampBlocks()) setBlock(x+bx,oy+by,z+bz,bi); commit(); toast(stamp.name+' placed'); } if(!e.shiftKey){ stamp=null; stampGroup.visible=false; renderBld(); } return; }
+  if(stamp){ if(h){ const [x,y,z]=cellFromHit(h,true); const oy=h.object.userData.ground?0:y; begin(); for(const [bx,by,bz,bi] of stampBlocks()) setBlock(x+bx,oy+by,z+bz,bi); commit(); toast(stamp.name+' placed'); } if(!e.shiftKey&&!IS_TOUCH){ stamp=null; stampGroup.visible=false; renderBld(); } return; }
   let t=tool; if(d.b===2) t='erase'; else if(d.b===1) t='pick'; begin(); applyTool(h,t); commit(); });
 cv.addEventListener('wheel',e=>{ e.preventDefault(); orbit.dist=Math.max(6,Math.min(160,orbit.dist*(1+Math.sign(e.deltaY)*.1))); },{passive:false});
 // pinch
@@ -306,11 +321,17 @@ document.querySelectorAll('.tools button').forEach(b=>b.onclick=()=>{ stamp=null
 $('mBuild').onclick=()=>setTool('build'); $('mErase').onclick=()=>setTool('erase'); $('mPaint').onclick=()=>setTool('paint');
 $('brush').oninput=e=>{ brush=+e.target.value; $('brushV').textContent=brush; };
 $('gsize').oninput=e=>{ ground=+e.target.value; $('gsizeV').textContent=ground; buildGround(); dirty=true; };
-$('rotL').onclick=()=>{ stampRot=(stampRot+3)%4; }; $('rotR').onclick=()=>{ stampRot=(stampRot+1)%4; };
+$('rotL').onclick=()=>{ stampRot=(stampRot+3)%4; }; $('rotR').onclick=()=>{ stampRot=(stampRot+1)%4; }; $('rotQ').onclick=()=>{ stampRot=(stampRot+1)%4; }; $('rotX').onclick=()=>{ stamp=null; stampGroup.visible=false; renderBld(); };
 
+// ---- mobile slide-up sheet for Buildings / World / Help ----
+const mSheet=$('mSheet'), mBody=$('mSheetBody'); let sheetPanel=null;
+function openSheet(id){ closeSheet(); const pnl=$(id); sheetPanel={el:pnl,parent:pnl.parentNode,next:pnl.nextSibling}; $('mSheetTitle').textContent=pnl.querySelector('.lbl').firstChild.textContent.trim(); mBody.appendChild(pnl); mSheet.classList.add('show'); }
+function closeSheet(){ if(!sheetPanel) return; sheetPanel.parent.insertBefore(sheetPanel.el,sheetPanel.next); sheetPanel=null; mSheet.classList.remove('show'); }
+document.querySelectorAll('#mTabs button').forEach(b=>b.onclick=()=>openSheet(b.dataset.p)); $('mSheetClose').onclick=closeSheet; mSheet.addEventListener('pointerdown',e=>{ if(e.target===mSheet) closeSheet(); });
+const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
 // =============== UI RENDER ===============
 function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; }
-function renderBld(){ const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast('Click the ground to place · R rotates · Shift keeps stamping'); } renderBld(); }; el.appendChild(btn); }); }
+function renderBld(){ $('rotQuick').style.display=stamp?'flex':'none'; const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast(IS_TOUCH?'Tap the ground to place it':'Click the ground to place · R rotates · Shift keeps stamping'); if(mSheet.classList.contains('show')) closeSheet(); } renderBld(); }; el.appendChild(btn); }); }
 function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 
