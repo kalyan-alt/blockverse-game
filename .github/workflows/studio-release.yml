@@ -8,6 +8,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -31,3 +32,34 @@ jobs:
             dist/Blockverse-Studio-Setup.exe
             dist/Blockverse-Studio.dmg
             dist/Blockverse-Studio.AppImage
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Prepare web app (studio.html + vendored three.js)
+        run: |
+          npm install
+          npm run prepare-app
+      - name: Wrap with Capacitor
+        run: |
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap init "Blockverse Studio" com.blockverse.studio --web-dir app
+          npx cap add android
+          npx cap sync android
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../Blockverse-Studio.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: Blockverse-Studio-apk, path: Blockverse-Studio.apk }
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: Blockverse-Studio.apk
