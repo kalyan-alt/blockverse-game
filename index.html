@@ -583,14 +583,19 @@ function setMode(signup){ signupMode=signup; lgGo.textContent=signup?'Create acc
 document.getElementById('lgSwitch').onclick=()=>setMode(!signupMode);
 lgUser.addEventListener('input',()=>{ const p=nameProblem(lgUser.value); lgUser.classList.toggle('bad',!!p&&lgUser.value.length>0); lgErr.textContent=lgUser.value.length?(p||''):''; lgErr.className='err'; });
 async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=nameProblem(u); if(prob){ lgErr.textContent=prob; return; } if(p.length<4){ lgErr.textContent='Password must be at least 4 characters'; return; }
-  if(!ONLINE_URL){ lgErr.textContent='Accounts need the online server'; return; } lgGo.disabled=true; lgErr.className='err ok'; lgErr.textContent=signupMode?'Creating account…':'Signing in…';
+  if(!ONLINE_URL){ lgErr.textContent='Accounts need the online server'; return; } lgGo.disabled=true; lgErr.className='err ok'; lgErr.textContent=signupMode?'Creating account…':'Signing in…'; const tick=setInterval(()=>{ lgErr.textContent=waitingText(signupMode?'Creating account':'Signing in'); },500); setTimeout(()=>clearInterval(tick),90000);
   try{ const r=await fetch(SERVER_HTTP+'/auth/'+(signupMode?'signup':'login'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({u,p})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
     authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); toast(`Welcome${signupMode?'':' back'}, ${d.name}!`); }
   catch(e){ lgErr.className='err'; lgErr.textContent=e.message==='Failed to fetch'?'Server is waking up — try again in a moment':e.message; }
-  lgGo.disabled=false; }
+  lgGo.disabled=false; clearInterval(tick); }
 lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
 document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
 function hideLogin(){ document.getElementById('login').style.display='none'; }
+// Render's free tier puts the server to sleep when idle; waking it takes 20–60s. Ping it immediately so it's awake by the time someone signs in.
+let serverAwake=false, wakeStarted=0;
+function wakeServer(){ if(!ONLINE_URL||serverAwake) return; wakeStarted=wakeStarted||Date.now(); fetch(SERVER_HTTP+'/health',{cache:'no-store'}).then(r=>{ if(r.ok){ serverAwake=true; } else setTimeout(wakeServer,3000); }).catch(()=>setTimeout(wakeServer,3000)); }
+wakeServer(); setInterval(()=>{ if(serverAwake) fetch(SERVER_HTTP+'/health',{cache:'no-store'}).catch(()=>{ serverAwake=false; wakeStarted=0; wakeServer(); }); },4*60*1000); // keep it warm while the tab is open
+function waitingText(base){ if(serverAwake) return base; const secs=Math.round((Date.now()-wakeStarted)/1000); return base+(secs>3?` · waking up the server (free hosting), ${secs}s…`:''); }
 // ---- Sign in with Google (Google Identity Services) ----
 if(GOOGLE_CLIENT_ID&&ONLINE_URL){ const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.onload=()=>{ try{
     google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCred,ux_mode:'popup'});
@@ -601,12 +606,12 @@ function refreshGoogleLink(){ const row=document.getElementById('gLinkRow'); if(
   const st=document.getElementById('gLinkState'); if(googleLinked){ st.innerHTML='<span style="font-weight:800;color:#157a56">✅ Linked</span>'; return; }
   st.innerHTML='<div id="gBtn2"></div>'; google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>onGoogleCred(r,{token:authToken,linkCurrent:true}),ux_mode:'popup'});
   google.accounts.id.renderButton(document.getElementById('gBtn2'),{theme:'outline',size:'medium',shape:'pill',text:'continue_with',width:200}); }
-async function onGoogleCred(resp,extra){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…';
+async function onGoogleCred(resp,extra){ lgErr.className='err ok'; lgErr.textContent='Signing in with Google…'; const tick=setInterval(()=>{ lgErr.textContent=waitingText('Signing in with Google'); },500);
   try{ const r=await fetch(SERVER_HTTP+'/auth/google',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({credential:resp.credential,...(extra||{})})}); const d=await r.json(); if(!r.ok||d.error) throw new Error(d.error||'Failed');
     if(d.needName){ askGoogleName(resp,d.suggest||''); return; }
     googleLinked=true; if(extra&&extra.linkCurrent){ toast('✅ Google linked','You can now sign in with the Google button'); refreshGoogleLink(); lgErr.textContent=''; return; }
     authToken=d.token; store.set('bv_token',authToken); applyProfile(d.name,d.profile); showMod(!!d.admin); showOwner(!!d.owner); hideLogin(); refreshGoogleLink(); toast(`Welcome${d.created?'':' back'}, ${d.name}!`,d.created?'Google is linked to your new account':d.linked?'Google is now linked to this account':''); }
-  catch(e){ lgErr.className='err'; lgErr.textContent=e.message; if(/username|password|taken|short/i.test(e.message)&&extra) askGoogleName(resp,extra.u||'',extra.link,e.message); } }
+  catch(e){ lgErr.className='err'; lgErr.textContent=e.message; if(/username|password|taken|short/i.test(e.message)&&extra) askGoogleName(resp,extra.u||'',extra.link,e.message); } finally{ clearInterval(tick); } }
 function askGoogleName(resp,suggest,linkMode=false,errText=''){ const inp=v=>`style="width:100%;font:inherit;font-weight:800;font-size:16px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);margin-top:6px"`;
   sheet.innerHTML=`<h3>${linkMode?'Link Google to my account':'Create your Blockverse account'}</h3><div class="sub">${linkMode?'Sign in once with your username and password. After that, the Google button logs you straight in.':'Your Google account will be linked, so you can sign in with Google <b>or</b> with this username and password.'}</div>
     <label style="font-size:12px;font-weight:800;display:block;margin-top:8px">Username<input id="gName" maxlength="16" value="${esc(suggest)}" placeholder="3–16 letters, numbers or _" ${inp()}></label>
