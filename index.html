@@ -98,6 +98,8 @@
   #knob{position:absolute;left:47px;top:47px;width:56px;height:56px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
   #jump{position:fixed;right:22px;bottom:calc(34px + env(safe-area-inset-bottom));width:104px;height:104px;border-radius:50%;background:var(--sun);border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);font-weight:900;font-size:18px}
   #jump.down{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+  #carBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom));z-index:6;background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:10px 18px;font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--ink)}
+  body.console #carBtn{background:#fff;border-width:4px;filter:grayscale(1)}
   #camBtn{position:fixed;right:22px;bottom:calc(236px + env(safe-area-inset-bottom));background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
   #toast{z-index:60;position:fixed;top:36%;left:50%;transform:translate(-50%,-50%) scale(.9);background:#fff;border:4px solid var(--ink);border-radius:18px;padding:16px 28px;font-size:26px;font-weight:900;box-shadow:0 8px 0 var(--ink);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;text-align:center;max-width:90vw}
   #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
@@ -392,6 +394,7 @@
         <div class="modrow"><select id="ownItem"></select><button class="buy" data-own="giveitem">Give item</button><select id="ownGear"></select><button class="buy" data-own="givegear">Give weapon</button></div>
         <div class="modrow"><button class="buy" data-own="promote">Make admin</button><button class="buy owned" data-own="demote">Remove admin</button><input id="ownPw" placeholder="new password"><button class="buy owned" data-own="resetpw">Reset password</button><button class="buy" data-own="delete" style="background:var(--lava);color:#fff">Delete account</button></div>
         <div class="modrow"><input id="ownText" placeholder="announcement / message of the day"><button class="buy" data-own="announce">Announce now</button><button class="buy owned" data-own="motd">Set MOTD</button></div>
+        <div class="modrow"><button class="buy owned" data-own="unbanall">🕊 Clear ALL bans & mutes</button></div>
         <div class="hint" id="ownMsg"></div>
         <div class="modrow"><input id="ownQ" placeholder="search accounts"><button class="buy owned" id="ownSearch">Search</button></div>
         <div class="modlist" id="ownList">–</div>
@@ -451,6 +454,7 @@
   <div id="scope"></div>
   <button id="fire">FIRE</button>
   <button id="jump">JUMP</button>
+  <button id="carBtn" style="display:none">🚗 Enter car</button>
   <div id="conBar"><span><b>L</b>Move</span><span><b>Drag</b>Look</span><span><b>A</b>Jump</span><span id="conFire" style="display:none"><b>ZR</b>Fire</span><span><b>+</b>Menu</span></div>
   <div id="xhair"></div>
 </div>
@@ -515,6 +519,7 @@ const GAMES = [
   {tags:'obby tower climb spiral solo', cats:'obby solo', id:'tower', name:'Tower Climb',     emoji:'🗼', bg:'linear-gradient(135deg,#ffd23f,#ff8c42)', desc:'Spiral up · 8 stages', stages:8, speed:8.5, lava:0, tower:true},
   {tags:'solo speed keys boss blockbux worlds run', cats:'solo', id:'escape', name:'Speed Escape',  emoji:'⌨️', bg:'linear-gradient(135deg,#ffd23f,#ff4b3a)', desc:'5 worlds · grab keys for +1 speed · collect Blockbux · beat the boss', stages:8, speed:6, lava:0, escape:true},
   {tags:'survival forest campfire craft wood stone food night wolves online', cats:'survival online', id:'forest', name:'Campfire Nights', emoji:'🔥', bg:'linear-gradient(135deg,#0f2a1c,#3b7a4a)', desc:'Forest survival · wood, stone, food, crafting · 7 to 99 nights', stages:7, speed:9, lava:0, arena:true, forest:true},
+  {tags:'city open world driving cars deliveries missions roads gta style taxi', cats:'solo', id:'city', name:'Block City', emoji:'🚗', bg:'linear-gradient(135deg,#ffb039,#ff4b3a)', desc:'Open city · jack a car, cruise the streets, run deliveries for Blockbux', stages:1, speed:9, lava:0, city:true},
   {tags:'combat online shooter blaster team rounds bots pvp', cats:'combat online', id:'arena', name:'Blaster Arena',   emoji:'🎯', bg:'linear-gradient(135deg,#1d2433,#8c6cff)', desc:'Best of 7 rounds · last team standing · online or bots', stages:1, speed:10, lava:0, arena:true},
 ];
 
@@ -750,6 +755,7 @@ function buildWorld(g){
   const coin=(x,y,z)=>{ const m=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.18,20),mat(0xffd23f)); m.rotation.x=Math.PI/2; m.position.set(x,y,z); m.castShadow=true; scene.add(m); coins.push({mesh:m,taken:false,base:y}); };
   const checkpoint=(x,y,z,i)=>{ block(x,y,z,6,1,6,0x3ad39a,{checkpoint:i}); const pole=new THREE.Mesh(new THREE.BoxGeometry(.3,4,.3),mat(0x1d2433)); pole.position.set(x+2.3,y+2.5,z-2.3); scene.add(pole);
     const flag=new THREE.Mesh(new THREE.BoxGeometry(1.6,1,.15),mat(0xff4b3a)); flag.position.set(x+1.4,y+4,z-2.3); scene.add(flag); checkpoints.push({pos:new THREE.Vector3(x,y+1.5,z),flag}); };
+  if(g.city){ buildCity(g,block,coin,checkpoint); return; }
   if(g.studio){ buildStudio(g,block,coin,checkpoint); return; }
   if(g.escape){ buildEscape(g,block,coin,checkpoint); return; }
   if(g.forest){ buildForest(g,block,coin,checkpoint); return; }
@@ -774,6 +780,69 @@ function buildWorld(g){
   S={cp:0,deaths:0,coins:0,done:false,t:0,stages:g.stages};
   camYaw=0; camPitch=.45; respawn(); hud(); if(NET) spawnRemotes();
 }
+// ---------- Block City (open-world driving + deliveries) ----------
+let C=null;
+const CITY_COLORS=[0x8fd3ff,0xffd23f,0xff8c42,0x8c6cff,0x3ad39a,0xff7ab8,0xf3f5f9,0x9aa3b2,0xc24b3a,0xe6b36b];
+function makeCar(color){ const g=new THREE.Group(); const body=new THREE.Mesh(new THREE.BoxGeometry(2.2,.9,4.2),mat(color)); body.position.y=.75; body.castShadow=true; g.add(body);
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.9,.8,2),new THREE.MeshLambertMaterial({color:0x1d2433})); cab.position.set(0,1.55,-.2); g.add(cab);
+  const glass=new THREE.Mesh(new THREE.BoxGeometry(1.7,.6,1.9),new THREE.MeshLambertMaterial({color:0xcfefff,transparent:true,opacity:.7})); glass.position.set(0,1.6,-.2); g.add(glass);
+  const wm=new THREE.MeshLambertMaterial({color:0x1d2433}); for(const [x,z] of [[-1.1,1.4],[1.1,1.4],[-1.1,-1.4],[1.1,-1.4]]){ const w=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.4,14),wm); w.rotation.z=Math.PI/2; w.position.set(x,.45,z); g.add(w); }
+  const hl=new THREE.MeshLambertMaterial({color:0xffffff,emissive:0xffffcc,emissiveIntensity:.8}); for(const x of [-.7,.7]){ const h=new THREE.Mesh(new THREE.BoxGeometry(.4,.25,.1),hl); h.position.set(x,.8,2.1); g.add(h); }
+  return g; }
+function buildCity(g,block,coin,checkpoint){ scene.background=new THREE.Color(0x8fd3ff); scene.fog.color.set(0x8fd3ff); scene.fog.near=90; scene.fog.far=220;
+  const SZ=160, CELL=20, ROAD=6; block(0,-.5,0,SZ,1,SZ,0x5cc88d); // ground
+  C={inCar:null,cars:[],ai:[],pkg:null,dest:null,timer:0,earned:0,deliveries:0,msgT:0,near:null,speed:0,steer:0,size:SZ};
+  const roadMat=new THREE.MeshLambertMaterial({color:0x3a3f4a}), lineMat=new THREE.MeshLambertMaterial({color:0xffd23f}), walkMat=new THREE.MeshLambertMaterial({color:0xb9c0cc});
+  const addSlab=(x,z,w,d,m,y=.02)=>{ const q=new THREE.Mesh(new THREE.BoxGeometry(w,.04,d),m); q.position.set(x,y,z); q.receiveShadow=true; scene.add(q); };
+  const half=SZ/2; for(let i=-half+CELL/2;i<half;i+=CELL){ addSlab(i,0,ROAD,SZ,roadMat); addSlab(0,i,SZ,ROAD,roadMat); addSlab(i,0,.3,SZ,lineMat,.045); addSlab(0,i,SZ,.3,lineMat,.045); }
+  // city blocks with buildings
+  let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  for(let bx=-half+CELL/2;bx<half;bx+=CELL) for(let bz=-half+CELL/2;bz<half;bz+=CELL){ const cx=bx+CELL/2, cz=bz+CELL/2; if(cx>half-1||cz>half-1) continue; // block centre
+    const inner=CELL-ROAD-2; addSlab(cx,cz,inner+2,inner+2,walkMat,.03);
+    if(rnd()<.12){ // park
+      const t=new THREE.Mesh(new THREE.BoxGeometry(inner,.06,inner),new THREE.MeshLambertMaterial({color:0x3ad39a})); t.position.set(cx,.05,cz); scene.add(t);
+      for(let k=0;k<4;k++){ const tx=cx+(rnd()-.5)*(inner-3), tz=cz+(rnd()-.5)*(inner-3); block(tx,1,tz,.8,2,.8,0xc98b4a); block(tx,3,tz,2.6,2,2.6,0x2f8f4e); }
+      for(let k=0;k<3;k++) coin(cx+(rnd()-.5)*inner*.7,1.2,cz+(rnd()-.5)*inner*.7); continue; }
+    const n=rnd()<.5?1:2; for(let k=0;k<n;k++){ const w=n===1?inner-2:(inner-3)/2, d=inner-2-rnd()*3, h=4+Math.floor(rnd()*rnd()*22); const ox=n===1?0:(k===0?-(w/2+.5):(w/2+.5));
+      const col=CITY_COLORS[Math.floor(rnd()*CITY_COLORS.length)]; const b=block(cx+ox,h/2,cz,w,h,d,col); b.solid=true;
+      if(h>8){ const roof=block(cx+ox,h+.6,cz,w*.5,1.2,d*.5,0x1d2433); roof.solid=true; } if(rnd()<.3) coin(cx+ox,h+1.2,cz); } }
+  // parked cars along roads
+  for(let k=0;k<14;k++){ const onX=rnd()<.5; const lane=Math.floor(rnd()*(SZ/CELL))*CELL-half+CELL/2; const along=(rnd()-.5)*(SZ-20);
+    const car=makeCar(CITY_COLORS[Math.floor(rnd()*CITY_COLORS.length)]); car.position.set(onX?lane+ROAD/2-1.4:along, 0, onX?along:lane+ROAD/2-1.4); car.rotation.y=onX?0:Math.PI/2; scene.add(car); C.cars.push({mesh:car,heading:car.rotation.y,speed:0}); }
+  // AI traffic
+  for(let k=0;k<10;k++){ const onX=rnd()<.5; const lane=Math.floor(rnd()*(SZ/CELL))*CELL-half+CELL/2; const dir=rnd()<.5?1:-1; const car=makeCar(CITY_COLORS[Math.floor(rnd()*CITY_COLORS.length)]);
+    const off=(ROAD/2-1.4)*dir; const a={mesh:car,onX,lane,dir,pos:(rnd()-.5)*(SZ-20),speed:7+rnd()*5,off}; scene.add(car); C.ai.push(a); }
+  checkpoint(0,.5,half-9,0); totalCoins=0; player=buildAvatar(); scene.add(player);
+  P={pos:new THREE.Vector3(0,2,half-9),vel:new THREE.Vector3(),onGround:false,yaw:0,halfW:.7,standing:null}; S={cp:0,deaths:0,coins:0,done:false,t:0,stages:1};
+  camYaw=0; camPitch=.5; respawn(); hud(); document.getElementById('carBtn').style.display='none'; newDelivery(); toast('🚗 Block City','Walk up to a car and press E (or tap Enter car). Deliver 📦 packages to earn Blockbux!'); }
+function cityMarker(color){ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,.18,8,24),new THREE.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.6})); ring.rotation.x=Math.PI/2; ring.position.y=.3; g.add(ring);
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,40,8),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.35})); beam.position.y=20; g.add(beam); return g; }
+function cityRandomRoadPoint(){ const SZ=C.size, CELL=20, half=SZ/2; const lane=Math.floor(Math.random()*(SZ/CELL))*CELL-half+CELL/2; const along=(Math.random()-.5)*(SZ-24); return Math.random()<.5?new THREE.Vector3(lane,0,along):new THREE.Vector3(along,0,lane); }
+function newDelivery(){ if(C.pkg) scene.remove(C.pkg); if(C.dest) scene.remove(C.dest); let p=cityRandomRoadPoint(); while(p.distanceTo(P.pos)<25) p=cityRandomRoadPoint();
+  C.pkg=cityMarker(0xffd23f); C.pkg.position.copy(p); const box=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),mat(0xc98b4a)); box.position.y=1.2; C.pkg.add(box); scene.add(C.pkg); C.dest=null; C.timer=0; cityHud(); }
+function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*3)+' km/h'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
+function cityToggleCar(){ if(!C) return; if(C.inCar){ const car=C.inCar; C.inCar=null; const side=new THREE.Vector3(Math.cos(car.heading),0,-Math.sin(car.heading)).multiplyScalar(2.4); P.pos.copy(car.mesh.position).add(side); P.pos.y=2; P.vel.set(0,0,0); player.visible=true; document.getElementById('carBtn').textContent='🚗 Enter car'; cityHud(); return; }
+  if(C.near){ C.inCar=C.near; C.speed=0; player.visible=false; document.getElementById('carBtn').textContent='🚪 Get out'; cityHud(); } }
+function carBlocked(x,z){ const half=C.size/2; if(Math.abs(x)>half-2||Math.abs(z)>half-2) return true; for(const p of platforms){ if(!p.solid) continue; const m=p.mesh.position,s=p.size; if(Math.abs(x-m.x)<s.x/2+1.4&&Math.abs(z-m.z)<s.z/2+1.4) return true; } return false; }
+function updateCity(dt){ if(!C) return; C.msgT-=dt;
+  // AI traffic drives along its lane and turns around at the edge
+  for(const a of C.ai){ a.pos+=a.speed*a.dir*dt; const half=C.size/2-12; if(a.pos>half||a.pos<-half){ a.dir*=-1; a.pos=Math.max(-half,Math.min(half,a.pos)); } const m=a.mesh; if(a.onX){ m.position.set(a.lane+a.off*(a.dir>0?1:-1)*-1,0,a.pos); m.rotation.y=a.dir>0?0:Math.PI; } else { m.position.set(a.pos,0,a.lane+a.off*(a.dir>0?1:-1)); m.rotation.y=a.dir>0?Math.PI/2:-Math.PI/2; }
+    if(!C.inCar&&Math.abs(P.pos.x-m.position.x)<1.8&&Math.abs(P.pos.z-m.position.z)<2.6&&P.pos.y<3){ P.pos.x+=(P.pos.x-m.position.x>0?1:-1)*4; toast('🚗 Watch out!','look both ways'); } }
+  if(C.inCar){ const car=C.inCar; let th=0, st=0; if(keys.KeyW||keys.ArrowUp) th+=1; if(keys.KeyS||keys.ArrowDown) th-=1; if(keys.KeyA||keys.ArrowLeft) st+=1; if(keys.KeyD||keys.ArrowRight) st-=1; th+=-(joy.y+pad.y); st+=-(joy.x+pad.x); th=Math.max(-1,Math.min(1,th)); st=Math.max(-1,Math.min(1,st));
+    if(menuOpen) th=st=0; const brake=(keys.Space||jumpHeld); C.speed+=th*(th>0?22:14)*dt; if(brake) C.speed*=Math.pow(.02,dt); C.speed*=Math.pow(.55,dt); C.speed=Math.max(-10,Math.min(30,C.speed));
+    if(Math.abs(C.speed)>.3) car.heading+=st*Math.min(1,Math.abs(C.speed)/8)*2.4*dt*Math.sign(C.speed);
+    const nx=car.mesh.position.x-Math.sin(car.heading)*C.speed*dt*-1, nz=car.mesh.position.z-Math.cos(car.heading)*C.speed*dt*-1;
+    if(carBlocked(nx,nz)){ C.speed*=-.3; } else { car.mesh.position.x=nx; car.mesh.position.z=nz; } car.mesh.rotation.y=car.heading;
+    P.pos.set(car.mesh.position.x,2,car.mesh.position.z); P.vel.set(0,0,0); P.onGround=true;
+    if(look.id===null&&Math.abs(C.speed)>1){ let d=car.heading-camYaw; d=Math.atan2(Math.sin(d),Math.cos(d)); camYaw+=d*Math.min(1,dt*3); }
+    jumpQueued=false; }
+  else { C.near=null; let best=6; for(const c of C.cars){ const d=c.mesh.position.distanceTo(P.pos); if(d<best){ best=d; C.near=c; } } document.getElementById('carBtn').style.display=C.near?'':'none'; }
+  // deliveries
+  if(C.pkg&&!C.dest&&C.pkg.position.distanceTo(P.pos)<3){ scene.remove(C.pkg); C.pkg=null; let d=cityRandomRoadPoint(); while(d.distanceTo(P.pos)<40) d=cityRandomRoadPoint(); C.dest=cityMarker(0x3ad39a); C.dest.position.copy(d); scene.add(C.dest); C.timer=Math.max(25,d.distanceTo(P.pos)/9+15); toast('📦 Got the package!','Drive to the green marker — '+Math.ceil(C.timer)+'s'); }
+  if(C.dest){ C.timer-=dt; if(C.dest.position.distanceTo(P.pos)<3.5){ const pay=Math.max(3,Math.round(C.timer/3)+5); acct.bits+=pay; C.earned+=pay; C.deliveries++; fmtBits(); markDirty(); scene.remove(C.dest); C.dest=null; toast('✅ Delivered! +'+pay+' Blockbux',C.deliveries+' deliveries so far'); setTimeout(()=>{ if(C) newDelivery(); },1500); }
+    else if(C.timer<=0){ scene.remove(C.dest); C.dest=null; toast('⏰ Too slow!','package expired — grab the next one'); setTimeout(()=>{ if(C) newDelivery(); },1500); } }
+  if(C.msgT<=0){ C.msgT=.25; cityHud(); }
+  if(C.pkg){ C.pkg.rotation.y+=dt; C.pkg.children[2].position.y=1.2+Math.sin(S.t*3)*.2; } if(C.dest) C.dest.rotation.y+=dt; }
 // ---------- Studio Worlds (published from Blockverse Studio) ----------
 const STUDIO_BLOCKS={grass:0x3ad39a,dirt:0x8b5a2b,stone:0x8d94a3,cobble:0x6b7385,wood:0xc98b4a,plank:0xe6b36b,brick:0xc24b3a,sand:0xf3dd9d,snow:0xf3f5f9,leaf:0x2f8f4e,water:0x4aa8ff,glass:0xcfefff,lava:0xff4b3a,glow:0xffd23f,red:0xff4b3a,orange:0xff8c42,yellow:0xffd23f,green:0x3ad39a,blue:0x4aa8ff,purple:0x8c6cff,pink:0xff7ab8,white:0xffffff,gray:0x9aa3b2,black:0x1d2433,pay:0xffd23f,counter:0xe6b36b};
 function esc(t){ return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1103,6 +1172,8 @@ function openWeaponSheet(){ if(document.pointerLockElement) document.exitPointer
   sheet.querySelector('#loApply').onclick=apply; sheet.querySelector('#loClose').onclick=apply; modal.classList.add('show'); }
 document.getElementById('wpnBtn2').onclick=openWeaponSheet;
 addEventListener('keydown',e=>{ if(G&&G.arena&&running&&A&&A.roundOver&&e.code==='KeyB'&&!modal.classList.contains('show')) openWeaponSheet(); });
+addEventListener('keydown',e=>{ if(G&&G.city&&running&&e.code==='KeyE'&&!modal.classList.contains('show')) cityToggleCar(); });
+document.getElementById('carBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); cityToggleCar(); });
 function renderLoadout(){ loadoutEl.innerHTML=''; SLOTS.forEach((k,i)=>{ const w=loadout[k]; const b=document.createElement('button'); b.className='slot'+(i===slot?' on':''); b.dataset.i=i;
   b.innerHTML=`<span class="key">${i+1}</span>${w.emoji}<small>${k.slice(0,3).toUpperCase()}</small><div class="cd" style="height:0"></div>`; b.addEventListener('pointerdown',e=>{ stop(e); setSlot(i); }); loadoutEl.appendChild(b); }); }
 function setSlot(i){ slot=i; WPN=loadout[SLOTS[i]]; loadoutEl.querySelectorAll('.slot').forEach((el,j)=>el.classList.toggle('on',j===i)); wpnNameEl.textContent=WPN.emoji+' '+WPN.name+' — '+WPN.desc; wpnNameEl.classList.add('show'); clearTimeout(wpnNameEl._t); wpnNameEl._t=setTimeout(()=>wpnNameEl.classList.remove('show'),1500);
@@ -1451,6 +1522,7 @@ function die(){ if(G&&G.escape&&E){ E.speed=Math.max(E.base,E.speed-3); } if(G&&
 const clock=new THREE.Clock(); let running=false; const GRAV=-30; let JUMP=11.5; const tmpV=new THREE.Vector3();
 function update(dt){
   S.t+=dt;
+  if(G.city){ updateCity(dt); if(C.inCar){ return; } }
   for(const p of platforms){ if(!p.moving) continue; const m=p.moving; p.base=p.base||p.mesh.position.clone(); const prev=p.mesh.position[m.axis]; p.mesh.position[m.axis]=p.base[m.axis]+Math.sin(S.t*m.speed+m.phase)*m.amp; p.delta=p.delta||new THREE.Vector3(); p.delta.set(0,0,0); p.delta[m.axis]=p.mesh.position[m.axis]-prev; }
   if(P.standing&&P.standing.delta) P.pos.add(P.standing.delta);
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz-=1; if(keys.KeyS||keys.ArrowDown) iz+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1; if(keys.KeyD||keys.ArrowRight) ix+=1;
@@ -1505,11 +1577,11 @@ addEventListener('resize',resize);
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; jumpHeld=false; fireHeld=false; joy.id=null; joy.x=joy.y=0; setKnob(0,0); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 
-function startGame(g){ document.body.classList.add('ingame'); document.body.classList.toggle('arena',!!g.arena); document.getElementById('conFire').style.display=g.arena?'':'none'; G=g; qpanel.classList.toggle('show',!!g.escape); chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
+function startGame(g){ document.body.classList.add('ingame'); document.body.classList.toggle('arena',!!g.arena); document.getElementById('conFire').style.display=g.arena?'':'none'; G=g; qpanel.classList.toggle('show',!!g.escape||!!g.city); chatLog.innerHTML=''; unread=0; chatN.style.display='none'; chatEl.classList.remove('show'); chatBtn.style.display=SET.chat?'block':'none'; document.getElementById('fps').style.display=SET.fps?'block':'none'; chatLine('', ONLINE_URL?'Chat is shared with everyone in this game. Be kind — type /report name reason to flag someone.':'Chat needs the online server','sys'); netPill.className=''; if(!ONLINE_URL) netStatus('off','Offline'); JUMP=g.jump||11.5; if(scene) disposeScene(); buildWorld(g); const ar=!!g.arena; fireBtn.style.display=ar?'block':'none'; slideBtn.style.display=ar?'block':'none'; fpPitch=0; if(ar) setFP(SET.firstPerson); else document.getElementById('camBtn').textContent=acct.follow?'📷 Follow':'📷 Free'; loadoutEl.classList.toggle('show',ar); document.getElementById('xhair').style.display=ar?'block':'none'; setScope(false); if(ar&&g.forest){ renderLoadout(); setSlot(0); forestHud(); roundsEl.classList.remove('show'); hideInter(); slideBtn.style.display='none'; document.getElementById('craftBtn').style.display='block'; document.getElementById('res').classList.add('show'); toast('☀️ Day 1',`chop · mine · pick berries · craft (🛠️) · keep the fire fed · survive ${NIGHTS_TO_WIN} nights`); }
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ document.body.classList.remove('ingame','arena'); running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ document.body.classList.remove('ingame','arena'); document.getElementById('carBtn').style.display='none'; C=null; running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
