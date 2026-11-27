@@ -221,6 +221,11 @@
   .modrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
   .modrow input,.modrow select{font:inherit;font-weight:700;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink);flex:1;min-width:90px}
   .modlist{font-size:12px;font-weight:600;line-height:1.5;max-height:160px;overflow:auto}
+  .fr{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:2px solid #eef1f6} .fr:last-child{border-bottom:0}
+  .fr .dot{width:10px;height:10px;border-radius:50%;background:#cfd6e3;flex:none} .fr .dot.on{background:var(--mint);box-shadow:0 0 0 3px #3ad39a33}
+  .fr .nm{flex:1;font-weight:800;font-size:13px} .fr .nm small{display:block;color:var(--muted);font-weight:700;font-size:11px}
+  .fr button{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-weight:800;font-size:11px;cursor:pointer} .fr button.ok{background:var(--mint)} .fr button.no{background:#ffe4e1}
+  #frBadge{display:none;background:var(--lava);color:#fff;border-radius:999px;font-size:10px;font-weight:900;padding:1px 6px;margin-left:4px;vertical-align:top}
   .modlist b{color:var(--lava)}
   #menu{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(29,36,51,.6)}
   #menu.show{display:flex}
@@ -320,7 +325,7 @@
 <!-- ============ HOME ============ -->
 <div id="home">
   <div id="topbar">
-    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v69</span></div>
+    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v70</span></div>
     <button class="chip" id="chipBuy" style="border:0"><svg class="bux" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><span id="bitsTop">0</span><span style="opacity:.7;font-size:16px;line-height:1">+</span></button>
     <button id="avatarBtn" title="Account"><canvas id="avMini" width="72" height="72"></canvas></button>
   </div>
@@ -388,6 +393,14 @@
         <div class="row" id="gLinkRow" style="display:none"><span class="lbl">Google</span><span id="gLinkState" style="display:flex;align-items:center;gap:8px"><div id="gBtn2"></div></span></div>
         <div class="row"><span class="lbl">Signed in</span><button class="buy owned" id="signOut">Sign out</button></div>
         <div class="row"><span class="lbl">Blockbux</span><span class="val" id="bitsAcct">0</span></div>
+      </div>
+      <div class="panel" id="friendsPanel" style="display:none">
+        <div class="lbl" style="font-weight:900;display:flex;justify-content:space-between;align-items:center">👥 Friends <span id="frCount" style="font-size:11px;color:var(--muted)"></span></div>
+        <div style="display:flex;gap:6px;margin:8px 0"><input id="frName" maxlength="16" placeholder="Add a friend by username" style="flex:1;font:inherit;font-weight:800;padding:8px 10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink)"><button class="buy" id="frAdd">Send request</button></div>
+        <div class="hint" id="frMsg" style="min-height:16px"></div>
+        <div id="frReqWrap" style="display:none"><div class="lbl" style="font-weight:800;margin-top:6px">Requests</div><div class="modlist" id="frReqs"></div></div>
+        <div class="lbl" style="font-weight:800;margin-top:6px">My friends</div><div class="modlist" id="frList" style="max-height:220px">–</div>
+        <div id="frSentWrap" style="display:none"><div class="lbl" style="font-weight:800;margin-top:6px">Sent</div><div class="modlist" id="frSent"></div></div>
         <div class="row"><span class="lbl">Coins collected</span><span class="val" id="statCoins">0</span></div>
         <div class="row"><span class="lbl">Games finished</span><span class="val" id="statWins">0</span></div>
         <div class="row"><span class="lbl">Wipeouts</span><span class="val" id="statDeaths">0</span></div>
@@ -424,7 +437,7 @@
     <button class="on" data-s="games"><span>🎮</span>Games</button>
     <button data-s="avatar"><span>🧍</span>Avatar</button>
     <button data-s="shop"><span>🛍️</span>Shop</button>
-    <button data-s="account"><span>👤</span>Account</button>
+    <button data-s="account"><span>👤</span>Account<span id="frBadge">0</span></button>
   </nav>
 </div>
 
@@ -556,7 +569,7 @@ function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gam
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+b.dataset.s).classList.add('active'); if(b.dataset.s==='avatar') drawPreview(); });
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+b.dataset.s).classList.add('active'); if(b.dataset.s==='avatar') drawPreview(); if(b.dataset.s==='account') friendsRefresh(); });
 document.getElementById('avatarBtn').onclick=()=>document.querySelector('[data-s=account]').click();
 // ---------- accounts ----------
 const BANNED_WORDS=['fuck','shit','bitch','cunt','dick','cock','pussy','asshole','nigg','fag','retard','whore','slut','rape','nazi','hitler','porn','sex','penis','vagina','boob','kys','hoe','twat','wank','cum','damn','bastard','douche','pedo','molest'];
@@ -580,7 +593,7 @@ async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?tok
 document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
 document.getElementById('modRefresh').onclick=refreshMod;
 document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
-function applyProfile(name,pr){ googleLinked=!!(pr&&pr.googleLinked); setTimeout(refreshGoogleLink,0); acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
+function applyProfile(name,pr){ googleLinked=!!(pr&&pr.googleLinked); setTimeout(refreshGoogleLink,0); setTimeout(friendsRefresh,300); acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
 function profileOut(){ return {settings:SET,boost:acct.boost||0,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
 function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
@@ -599,6 +612,21 @@ async function auth(){ const u=lgUser.value.trim(), p=lgPass.value; const prob=n
 lgGo.onclick=auth; lgPass.addEventListener('keydown',e=>{ if(e.key==='Enter') auth(); });
 document.getElementById('lgGuest').onclick=()=>{ authToken=null; store.del('bv_token'); acct.name='Guest'+Math.floor(100+Math.random()*900); document.getElementById('nameShow').textContent=acct.name+' (guest)'; hideLogin(); toast('Playing as guest','progress won\'t be saved'); };
 function hideLogin(){ document.getElementById('login').style.display='none'; }
+// ---------- Friends ----------
+let FR={friends:[],requests:[],sent:[]};
+async function friendsApi(action,extra={}){ if(!authToken||!ONLINE_URL) return null; const r=await fetch(SERVER_HTTP+'/friends',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,action,...extra})}); const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw new Error(d.error||'Friends unavailable'); return d; }
+async function friendsRefresh(){ const pnl=document.getElementById('friendsPanel'); if(!authToken||!ONLINE_URL){ pnl.style.display='none'; return; } pnl.style.display=''; try{ const d=await friendsApi('list'); if(d){ FR=d; renderFriends(); } }catch(e){ document.getElementById('frMsg').textContent=e.message; } }
+function renderFriends(){ const list=document.getElementById('frList'), reqs=document.getElementById('frReqs'), sent=document.getElementById('frSent');
+  document.getElementById('frCount').textContent=FR.friends.length?`${FR.friends.filter(f=>f.online).length} online · ${FR.friends.length} total`:'';
+  list.innerHTML=FR.friends.length?'':'<div class="hint">No friends yet — add someone by their username.</div>';
+  for(const f of FR.friends.slice().sort((a,b)=>(b.online-a.online)||a.name.localeCompare(b.name))){ const row=document.createElement('div'); row.className='fr'; row.innerHTML=`<span class="dot ${f.online?'on':''}"></span><span class="nm">${esc(f.name)}<small>${f.online?(f.where?'Playing '+esc(f.where):'Online'):'Offline'}</small></span><button data-a="rm" class="no">Remove</button>`; row.querySelector('[data-a=rm]').onclick=()=>friendAct('remove',f.name,'Removed '+f.name); list.appendChild(row); }
+  document.getElementById('frReqWrap').style.display=FR.requests.length?'':'none'; reqs.innerHTML=''; for(const n of FR.requests){ const row=document.createElement('div'); row.className='fr'; row.innerHTML=`<span class="dot"></span><span class="nm">${esc(n)}<small>wants to be friends</small></span><button data-a="ok" class="ok">Accept</button><button data-a="no" class="no">Decline</button>`; row.querySelector('[data-a=ok]').onclick=()=>friendAct('accept',n,'You and '+n+' are now friends 🎉'); row.querySelector('[data-a=no]').onclick=()=>friendAct('decline',n,''); reqs.appendChild(row); }
+  document.getElementById('frSentWrap').style.display=FR.sent.length?'':'none'; sent.innerHTML=''; for(const n of FR.sent){ const row=document.createElement('div'); row.className='fr'; row.innerHTML=`<span class="dot"></span><span class="nm">${esc(n)}<small>request sent</small></span><button data-a="x" class="no">Cancel</button>`; row.querySelector('[data-a=x]').onclick=()=>friendAct('cancel',n,''); sent.appendChild(row); }
+  const badge=document.getElementById('frBadge'); badge.style.display=FR.requests.length?'inline-block':'none'; badge.textContent=FR.requests.length; }
+async function friendAct(action,name,okMsg){ const msg=document.getElementById('frMsg'); try{ const d=await friendsApi(action,{name}); if(d){ FR=d; renderFriends(); } msg.textContent=okMsg; if(okMsg) toast('👥 '+okMsg); }catch(e){ msg.textContent=e.message; } }
+document.getElementById('frAdd').onclick=()=>{ const n=document.getElementById('frName').value.trim(); if(!n) return; document.getElementById('frName').value=''; friendAct('request',n,'Request sent to '+n); };
+document.getElementById('frName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('frAdd').click(); });
+setInterval(()=>{ if(authToken&&!running) friendsRefresh(); },45000);
 // Render's free tier puts the server to sleep when idle; waking it takes 20–60s. Ping it immediately so it's awake by the time someone signs in.
 let serverAwake=false, wakeStarted=0;
 function wakeServer(){ if(!ONLINE_URL||serverAwake) return; wakeStarted=wakeStarted||Date.now(); fetch(SERVER_HTTP+'/health',{cache:'no-store'}).then(r=>{ if(r.ok){ serverAwake=true; } else setTimeout(wakeServer,3000); }).catch(()=>setTimeout(wakeServer,3000)); }
@@ -831,9 +859,26 @@ function buildCity(g,block,coin,checkpoint){ scene.background=new THREE.Color(0x
 function cityMarker(color){ const g=new THREE.Group(); const ring=new THREE.Mesh(new THREE.TorusGeometry(1.6,.18,8,24),new THREE.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.6})); ring.rotation.x=Math.PI/2; ring.position.y=.3; g.add(ring);
   const beam=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,40,8),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.35})); beam.position.y=20; g.add(beam); return g; }
 function cityRandomRoadPoint(){ const SZ=C.size, CELL=20, half=SZ/2; const lane=Math.floor(Math.random()*(SZ/CELL))*CELL-half+CELL/2; const along=(Math.random()-.5)*(SZ-24); return Math.random()<.5?new THREE.Vector3(lane,0,along):new THREE.Vector3(along,0,lane); }
+// turn-by-turn: a glowing route line on the road (L-shaped via the road grid) + a big arrow + "turn left/right" text
+let routeLine=null, routeArrow=null;
+function cityRoute(){ if(!C||!C.dest){ if(routeLine){ routeLine.visible=false; } if(routeArrow) routeArrow.visible=false; return; }
+  const CELL=20, half=C.size/2, lane=v=>Math.round((v-(-half+CELL/2))/CELL)*CELL+(-half+CELL/2); // snap to nearest road centre line
+  const p=P.pos, d=C.dest.position; const pts=[new THREE.Vector3(p.x,.4,p.z)];
+  const onXRoad=Math.abs(p.x-lane(p.x))<4, onZRoad=Math.abs(p.z-lane(p.z))<4; // which road am I on?
+  if(onXRoad&&!onZRoad){ pts.push(new THREE.Vector3(lane(p.x),.4,lane(d.z))); pts.push(new THREE.Vector3(d.x,.4,lane(d.z))); }
+  else if(onZRoad&&!onXRoad){ pts.push(new THREE.Vector3(lane(d.x),.4,lane(p.z))); pts.push(new THREE.Vector3(lane(d.x),.4,d.z)); }
+  else { pts.push(new THREE.Vector3(lane(p.x),.4,p.z)); pts.push(new THREE.Vector3(lane(p.x),.4,lane(d.z))); pts.push(new THREE.Vector3(d.x,.4,lane(d.z))); }
+  pts.push(new THREE.Vector3(d.x,.4,d.z));
+  if(!routeLine){ routeLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:0x3ad39a,dashSize:1.2,gapSize:.8,linewidth:2})); scene.add(routeLine); } routeLine.geometry.dispose(); routeLine.geometry=new THREE.BufferGeometry().setFromPoints(pts); routeLine.computeLineDistances(); routeLine.visible=true;
+  if(!routeArrow){ const g=new THREE.Group(); const cone=new THREE.Mesh(new THREE.ConeGeometry(.6,1.4,10),new THREE.MeshLambertMaterial({color:0x3ad39a,emissive:0x3ad39a,emissiveIntensity:.5})); cone.rotation.x=Math.PI/2; g.add(cone); routeArrow=g; scene.add(g); }
+  const next=pts.find(q=>q.distanceTo(pts[0])>3)||pts[pts.length-1]; routeArrow.position.set(p.x,4.2+Math.sin(S.t*4)*.2,p.z); routeArrow.lookAt(next.x,4.2,next.z); routeArrow.visible=true;
+  // instruction text
+  const heading=C.inCar?C.inCar.heading:camYaw+Math.PI; const dx=next.x-p.x, dz=next.z-p.z; const want=Math.atan2(dx,dz); let rel=want-heading; rel=Math.atan2(Math.sin(rel),Math.cos(rel)); const deg=rel*180/Math.PI;
+  const remaining=pts.reduce((a,q,i)=>i?a+q.distanceTo(pts[i-1]):0,0);
+  C.turn=Math.abs(deg)<25?'⬆ Straight':Math.abs(deg)>150?'⟲ Turn around':deg>0?'⬅ Turn left':'➡ Turn right'; C.remain=Math.round(remaining); }
 function newDelivery(){ if(C.pkg) scene.remove(C.pkg); if(C.dest) scene.remove(C.dest); let p=cityRandomRoadPoint(); while(p.distanceTo(P.pos)<25) p=cityRandomRoadPoint();
   C.pkg=cityMarker(0xffd23f); C.pkg.position.copy(p); const box=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),mat(0xc98b4a)); box.position.y=1.2; C.pkg.add(box); scene.add(C.pkg); C.dest=null; C.timer=0; cityHud(); }
-function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*2.237*1.6)+' mph'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
+function cityHud(){ const q=document.getElementById('qText'), i=document.getElementById('qInfo'); if(C.inCar){ q.textContent='🚗 '+Math.round(Math.abs(C.speed)*2.237*1.6)+' mph'; } else q.textContent='🚶 on foot'; i.textContent=(C.dest?`${C.turn||'📦'} · ${C.remain||Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 get the yellow package')+` · ${C.earned} earned`; }
 function cityToggleCar(){ if(!C) return; if(C.inCar){ const car=C.inCar; C.inCar=null; const side=new THREE.Vector3(Math.cos(car.heading),0,-Math.sin(car.heading)).multiplyScalar(2.4); P.pos.copy(car.mesh.position).add(side); P.pos.y=2; P.vel.set(0,0,0); player.visible=true; document.getElementById('carBtn').textContent='🚗 Enter car'; cityCamLabel(); cityHud(); return; }
   if(C.near){ C.inCar=C.near; C.speed=0; C.cockpit=C.cockpit??true; player.visible=false; document.getElementById('carBtn').textContent='🚪 Get out'; cityCamLabel(); cityHud(); toast(C.cockpit?'🚗 Driver view':'🎥 Chase view','V / camera button switches view · Space brakes'); } }
 function carBlocked(x,z){ const half=C.size/2; if(Math.abs(x)>half-2||Math.abs(z)>half-2) return true; for(const p of platforms){ if(!p.solid) continue; const m=p.mesh.position,s=p.size; if(Math.abs(x-m.x)<s.x/2+1.4&&Math.abs(z-m.z)<s.z/2+1.4) return true; } return false; }
@@ -850,10 +895,11 @@ function updateCity(dt){ if(!C) return; C.msgT-=dt;
     jumpQueued=false; }
   else { C.near=null; let best=6; for(const c of C.cars){ const d=c.mesh.position.distanceTo(P.pos); if(d<best){ best=d; C.near=c; } } document.getElementById('carBtn').style.display=C.near?'':'none'; }
   // deliveries
-  if(C.pkg&&!C.dest&&C.pkg.position.distanceTo(P.pos)<3){ scene.remove(C.pkg); C.pkg=null; let d=cityRandomRoadPoint(); while(d.distanceTo(P.pos)<40) d=cityRandomRoadPoint(); C.dest=cityMarker(0x3ad39a); C.dest.position.copy(d); scene.add(C.dest); C.timer=Math.max(25,d.distanceTo(P.pos)/9+15); toast('📦 Got the package!','Drive to the green marker — '+Math.ceil(C.timer)+'s'); }
+  if(C.pkg&&!C.dest&&C.pkg.position.distanceTo(P.pos)<3){ scene.remove(C.pkg); C.pkg=null; let d=cityRandomRoadPoint(); while(d.distanceTo(P.pos)<40) d=cityRandomRoadPoint(); C.dest=cityMarker(0x3ad39a); C.dest.position.copy(d); scene.add(C.dest); C.timer=Math.max(25,d.distanceTo(P.pos)/9+15); cityRoute(); toast('📦 Got the package!','Follow the green line — '+Math.ceil(C.timer)+'s'); }
   if(C.dest){ C.timer-=dt; if(C.dest.position.distanceTo(P.pos)<3.5){ const pay=Math.max(3,Math.round(C.timer/3)+5); acct.bits+=pay; C.earned+=pay; C.deliveries++; fmtBits(); markDirty(); scene.remove(C.dest); C.dest=null; toast('✅ Delivered! +'+pay+' Blockbux',C.deliveries+' deliveries so far'); setTimeout(()=>{ if(C) newDelivery(); },1500); }
     else if(C.timer<=0){ scene.remove(C.dest); C.dest=null; toast('⏰ Too slow!','package expired — grab the next one'); setTimeout(()=>{ if(C) newDelivery(); },1500); } }
-  const dash=document.getElementById('dash'); if(C.inCar){ dash.style.display='flex'; document.getElementById('dashMph').textContent=Math.round(Math.abs(C.speed)*2.237*1.6); document.getElementById('dashGear').textContent=C.speed<-.5?'R':(keys.Space||jumpHeld)?'B':'D'; document.getElementById('dashJob').textContent=C.dest?`📦 → 🟢 ${Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 find the yellow package'; } else dash.style.display='none';
+  if(C.dest){ if(!C.routeT||C.routeT<S.t){ C.routeT=S.t+.2; cityRoute(); } } else if(routeLine){ routeLine.visible=false; if(routeArrow) routeArrow.visible=false; }
+  const dash=document.getElementById('dash'); if(C.inCar){ dash.style.display='flex'; document.getElementById('dashMph').textContent=Math.round(Math.abs(C.speed)*2.237*1.6); document.getElementById('dashGear').textContent=C.speed<-.5?'R':(keys.Space||jumpHeld)?'B':'D'; document.getElementById('dashJob').textContent=C.dest?`${C.turn||''} · ${C.remain||Math.round(C.dest.position.distanceTo(P.pos))}m · ${Math.max(0,Math.ceil(C.timer))}s`:'📦 find the yellow package'; } else dash.style.display='none';
   if(C.msgT<=0){ C.msgT=.25; cityHud(); }
   if(C.pkg){ C.pkg.rotation.y+=dt; C.pkg.children[2].position.y=1.2+Math.sin(S.t*3)*.2; } if(C.dest) C.dest.rotation.y+=dt; }
 // ---------- Studio Worlds (published from Blockverse Studio) ----------
@@ -1101,7 +1147,7 @@ function lobStatusSet(t){ const e=document.getElementById('lobStatus'); if(e) e.
 function connectLobby(g){ if(LOB){ renderLobby(); return; } fetch(SERVER_HTTP).catch(()=>{}); let ws; try{ ws=new WebSocket(ONLINE_URL); }catch{ lobStatusSet('Server not reachable — bots only'); enablePlay(); return; }
   const to=setTimeout(()=>{ if(!LOB){ lobStatusSet('Waking server… hang on'); } },6000); const give=setTimeout(()=>{ if(!LOB){ lobStatusSet('Server not reachable — bots only'); enablePlay(); try{ws.close();}catch{} } },45000);
   ws.onopen=()=>ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:'arena-lobby',mode:'lobby',teams:[8],target:0,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}}));
-  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;}
+  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(m.t==='toast'){ toast(m.big||'',m.small||''); if(/friend/i.test(m.big||'')) setTimeout(friendsRefresh,500); return; }
     if(m.t==='start'){ clearTimeout(to); clearTimeout(give); LOB={ws,me:m.you,players:m.players.map(p=>({id:p.id,name:p.name}))}; lobStatusSet('Connected · pick your map, mode and loadout, then Play'); enablePlay(); renderLobby(); }
     else if(m.t==='join'&&LOB){ LOB.players.push({id:m.player.id,name:m.player.name}); renderLobby(); }
     else if(m.t==='leave'&&LOB){ LOB.players=LOB.players.filter(p=>p.id!==m.id); renderLobby(); }
@@ -1238,7 +1284,7 @@ function connectBackground(g,attempt=1){ // no lobby screen: play right away, ot
   const retry=()=>{ if(NET||!running||G!==g) return; try{ws.close();}catch{} if(attempt<8) setTimeout(()=>connectBackground(g,attempt+1),4000); else netStatus('off','Offline · server not reachable'); };
   const to=setTimeout(retry,12000);
   const myG=g; ws.onopen=()=>{ ws.send(JSON.stringify({t:'join',token:authToken,name:acct.name,map:MAP.id,mode:MODE.id,teams:MODE.teams,target:MODE.target,nobots:true,avatar:{shirt:acct.shirt,pants:acct.pants,hat:acct.hat,wear:acct.wear}})); };
-  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(!running||G!==myG){ try{ws.close();}catch{} return; }
+  ws.onmessage=ev=>{ let m; try{m=JSON.parse(ev.data);}catch{return;} if(m.t==='toast'){ toast(m.big||'',m.small||''); return; } if(!running||G!==myG){ try{ws.close();}catch{} return; }
     if(m.t==='kicked'){ clearTimeout(to); kickedOut(m.reason); return; }
     if(m.t==='start'){ clearTimeout(to); NET={ws,me:m.you,team:m.team,host:m.host,players:m.players,bots:[],teams:m.teams,target:0,ffa:false,coop:true,q:[]}; ws.onmessage=ev2=>{ try{ NET.q.push(JSON.parse(ev2.data)); }catch{} }; ws.onclose=()=>{ NET=null; netStatus('off','Offline · disconnected'); }; spawnRemotes(true); netCount(); if(G.forest&&NET.host!==NET.me){ /* late joiner: world comes from the host */ A.F.t=0; } } };
   ws.onerror=()=>{ clearTimeout(to); retry(); }; ws.onclose=()=>{ if(!NET){ clearTimeout(to); retry(); } }; }
@@ -1610,7 +1656,7 @@ function startGame(g){ document.body.classList.add('ingame'); document.body.clas
   else { document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); }
   if(ar&&!g.forest){ renderLoadout(); setSlot(0); arenaHud(); A.roundNo=1; renderRounds(); roundsEl.classList.add('show'); hideInter(); toast('Round 1',`first to ${ROUNDS_TO_WIN} rounds · ${matchMedia('(pointer:fine)').matches?'click to lock mouse · Esc for menu · P toggles 1st/3rd person':'tap 👁️ to switch 1st/3rd person'}`); } else { roundsEl.classList.remove('show'); hideInter(); } document.getElementById('home').style.display='none'; document.getElementById('game').classList.add('active'); resize(); toastEl.classList.remove('show'); running=true; clock.getDelta(); }
 function disposeScene(){ scene.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } }); }
-function leaveGame(){ document.body.classList.remove('ingame','arena'); document.getElementById('carBtn').style.display='none'; document.getElementById('dash').style.display='none'; C=null; running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
+function leaveGame(){ document.body.classList.remove('ingame','arena'); document.getElementById('carBtn').style.display='none'; document.getElementById('dash').style.display='none'; C=null; routeLine=null; routeArrow=null; running=false; qpanel.classList.remove('show'); E=null; fly=false; god=false; speedX=1; menuOpen=false; menuEl.classList.remove('show'); chatEl.classList.remove('show'); chatBtn.style.display='none'; document.getElementById('fps').style.display='none'; netLeave(); REM=[]; feedEl.innerHTML=''; netPill.className=''; document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(document.pointerLockElement) document.exitPointerLock(); roundsEl.classList.remove('show'); hideInter(); document.getElementById('craftBtn').style.display='none'; document.getElementById('res').classList.remove('show'); document.querySelectorAll('.dmg').forEach(e=>e.remove()); if(player) player.scale.y=1; setScope(false); scopeBtn.style.display='none'; loadoutEl.classList.remove('show'); wpnNameEl.classList.remove('show'); document.getElementById('game').classList.remove('active'); document.getElementById('home').style.display='flex'; toastEl.classList.remove('show'); renderGrid(); }
 document.getElementById('exit').onclick=()=>menuOpen?closeMenu():openMenu();
 addEventListener('beforeunload',netLeave);
 
