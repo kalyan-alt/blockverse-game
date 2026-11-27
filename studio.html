@@ -40,6 +40,11 @@
   .pal button i.glass{background:repeating-linear-gradient(45deg,#cfefff 0 4px,#9fd9ff 4px 8px)}
   .pal button i.lava{background:linear-gradient(135deg,#ff4b3a,#ffb039)}
   .pal button i.glow{box-shadow:inset 0 0 10px #fff}
+  .money{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .money button{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px 4px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .money button b{font-size:22px;color:#b08600} .money button small{color:var(--muted);font-size:10px;font-weight:700}
+  .money button.on{background:var(--coin)}
+  #moneyRows .rng{margin-top:8px}
   .bld{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .bld button{display:flex;flex-direction:column;align-items:center;gap:2px}
   .bld button b{font-size:22px}
@@ -52,7 +57,7 @@
   .rng input{flex:1}
   .help{font-size:11px;color:var(--muted);font-weight:700;line-height:1.5}
   #mobileBar{display:none}
-  #mTabs,#mSheet,#edgeTab,#scrim{display:none}
+  #mTabs,#mSheet,#edgeTab,#scrim,#fabBlocks{display:none}
   @media(max-width:900px),(pointer:coarse){
     #app{grid-template-columns:1fr;grid-template-rows:52px 1fr}
     aside{position:fixed;top:52px;right:0;bottom:0;width:150px;z-index:25;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 0 #1d243322}
@@ -61,6 +66,10 @@
     #edgeTab i{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid #fff}
     aside.open~#edgeTab{display:none}
     #scrim{position:fixed;inset:0;top:52px;z-index:23;display:none;background:transparent}
+    #fabBlocks{display:flex;flex-direction:column;align-items:center;justify-content:center;position:fixed;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:24;width:62px;height:62px;border-radius:50%;background:var(--sun);border:4px solid var(--ink);box-shadow:0 4px 0 var(--ink);font-size:24px;line-height:1}
+    #fabBlocks small{font-size:9px;font-weight:900;color:var(--ink)}
+    aside.open~#fabBlocks{display:none}
+    #hud{left:10px;bottom:calc(16px + env(safe-area-inset-bottom))}
     aside.open~#scrim{display:block}
     header h1{font-size:15px} header input{width:100px;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
     aside{padding:6px;gap:8px;border-left:3px solid var(--ink);background:var(--card);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
@@ -97,7 +106,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>Block<span>verse</span> Studio</h1>
+    <h1>Block<span>verse</span> Studio <small id="stVer" style="font-size:10px;font-weight:700;color:#8fd3ff;vertical-align:middle">v76</small></h1>
     <input id="wname" value="My World" maxlength="24" spellcheck="false">
     <div class="sp"></div>
     <button class="hb" id="bNew">New</button>
@@ -131,11 +140,17 @@
       </div>
       <div class="rng" style="margin-top:10px">Brush <input type="range" id="brush" min="1" max="4" value="1"><b id="brushV">1</b></div>
     </div>
+    <div class="panel" id="pMoney">
+      <div class="lbl">💰 Blockbux <small>earn from players</small></div>
+      <div class="money"><button id="mPay" data-bi="pay"><b>$</b>Pay gate<small>blocks the way until paid</small></button><button id="mShop" data-bi="counter"><b>🛒</b>Shop counter<small>sells an item</small></button></div>
+      <div id="moneyRows">
+      <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <input type="number" id="shopPrice" min="1" max="999" value="25" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
+      <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <input type="number" id="payPrice" min="1" max="999" value="10" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
+      </div>
+    </div>
     <div class="panel" id="pBlocks">
       <div class="lbl">Blocks <small>Q / E to cycle</small></div>
       <div class="pal" id="pal"></div>
-      <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <input type="number" id="shopPrice" min="1" max="999" value="25" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
-      <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <input type="number" id="payPrice" min="1" max="999" value="10" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
     </div>
     <div class="panel" id="pBld">
       <div class="lbl">Buildings <small>click to stamp</small></div>
@@ -155,7 +170,7 @@
     </div>
     <div id="mTabs"><button data-p="pBld">🏠<small>Build</small></button><button data-p="pWorld">⚙<small>World</small></button><button data-p="pHelp">❔<small>Help</small></button></div>
   </aside>
-  <div id="edgeTab" title="Blocks"><i></i>Blocks</div><div id="scrim"></div>
+  <div id="edgeTab" title="Blocks"><i></i>Blocks</div><div id="scrim"></div><button id="fabBlocks">🧱<small>Blocks</small></button>
   <div id="mSheet"><div class="mSheetIn"><div class="mSheetHead"><b id="mSheetTitle"></b><button id="mSheetClose">✕</button></div><div id="mSheetBody"></div></div></div>
 </div>
 
@@ -248,8 +263,8 @@ const $=id=>document.getElementById(id);
 
 // =============== THREE ===============
 const view=$('view');
-const TOUCH0=matchMedia('(pointer:coarse)').matches; const renderer=new THREE.WebGLRenderer({antialias:!TOUCH0,preserveDrawingBuffer:true,powerPreference:'high-performance'}); renderer.setPixelRatio(Math.min(devicePixelRatio,TOUCH0?1.5:2)); renderer.shadowMap.enabled=!TOUCH0; view.prepend(renderer.domElement);
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8fd3ff); scene.fog=new THREE.Fog(0x8fd3ff,80,200);
+const TOUCH0=matchMedia('(pointer:coarse)').matches; const renderer=new THREE.WebGLRenderer({antialias:!TOUCH0,preserveDrawingBuffer:true,powerPreference:'high-performance'}); renderer.setPixelRatio(TOUCH0?1:Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=!TOUCH0; view.prepend(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x8fd3ff); scene.fog=new THREE.Fog(0x8fd3ff,TOUCH0?60:80,TOUCH0?140:200);
 const camera=new THREE.PerspectiveCamera(55,1,.1,500);
 const orbit={yaw:.8,pitch:.6,dist:40,target:new THREE.Vector3(0,2,0)};
 scene.add(new THREE.HemisphereLight(0xffffff,0x7a8aa8,.9));
@@ -258,17 +273,23 @@ const sun=new THREE.DirectionalLight(0xfff2cc,.9); sun.position.set(30,60,20); s
 let groundMesh, gridHelper;
 function buildGround(){ if(groundMesh){ scene.remove(groundMesh); scene.remove(gridHelper); }
   groundMesh=new THREE.Mesh(new THREE.BoxGeometry(ground,1,ground),new THREE.MeshLambertMaterial({color:0x5cc88d})); groundMesh.position.set(0,-.5,0); groundMesh.receiveShadow=true; groundMesh.userData.ground=true; scene.add(groundMesh);
-  gridHelper=new THREE.GridHelper(ground,ground,0x2a9a68,0x3fb67e); gridHelper.position.y=.01; gridHelper.material.opacity=.45; gridHelper.material.transparent=true; scene.add(gridHelper); }
+  gridHelper=new THREE.GridHelper(ground,TOUCH0?ground/2:ground,0x2a9a68,0x3fb67e); gridHelper.position.y=.01; gridHelper.material.opacity=.45; gridHelper.material.transparent=true; scene.add(gridHelper); }
 buildGround();
 
 const geo=new THREE.BoxGeometry(1,1,1);
 const mats=BLOCKS.map(b=>new THREE.MeshLambertMaterial({color:b.c,transparent:!!b.op,opacity:b.op||1,emissive:b.glow||0x000000,emissiveIntensity:b.glow?.7:0}));
-const meshes=new Map(); const blocksGroup=new THREE.Group(); scene.add(blocksGroup);
-function addMesh(x,y,z,bi){ const m=new THREE.Mesh(geo,mats[bi]); m.position.set(x+.5,y+.5,z+.5); m.castShadow=!BLOCKS[bi].op; m.receiveShadow=true; m.userData.k=key(x,y,z); blocksGroup.add(m); meshes.set(m.userData.k,m); }
+const blocksGroup=new THREE.Group(); scene.add(blocksGroup);
+// Instanced rendering: a single draw call per block type (huge win on phones). Rebuilt lazily when the world changes.
+const inst=BLOCKS.map(()=>null); const instKeys=BLOCKS.map(()=>[]); let instDirty=true; const _m4=new THREE.Matrix4();
+function rebuildInstances(){ instDirty=false; const buckets=BLOCKS.map(()=>[]); for(const [k,bi] of world) buckets[bi].push(k);
+  for(let bi=0;bi<BLOCKS.length;bi++){ const keys=buckets[bi]; let im=inst[bi];
+    if(!keys.length){ if(im){ im.count=0; im.visible=false; } instKeys[bi]=[]; continue; }
+    if(!im||im.instanceMatrix.count<keys.length){ if(im){ blocksGroup.remove(im); im.dispose(); } im=new THREE.InstancedMesh(geo,mats[bi],Math.max(64,Math.ceil(keys.length*1.5))); im.castShadow=!BLOCKS[bi].op&&!TOUCH0; im.receiveShadow=!TOUCH0; im.userData.bi=bi; im.frustumCulled=false; blocksGroup.add(im); inst[bi]=im; }
+    im.visible=true; im.count=keys.length; for(let i=0;i<keys.length;i++){ const [x,y,z]=keys[i].split(',').map(Number); _m4.makeTranslation(x+.5,y+.5,z+.5); im.setMatrixAt(i,_m4); } im.instanceMatrix.needsUpdate=true; instKeys[bi]=keys; } }
+function hitInfo(h){ if(!h) return null; if(h.object.userData.ground) return {ground:true}; const k=instKeys[h.object.userData.bi]?.[h.instanceId]; if(k==null) return null; const [x,y,z]=k.split(',').map(Number); return {k,x,y,z}; }
 function setBlock(x,y,z,bi,record=true){ const k=key(x,y,z); const prev=world.has(k)?world.get(k):null; if(prev===bi) return; if(y<0||y>128||Math.abs(x)>200||Math.abs(z)>200) return;
   if(record&&pending) pending.push([x,y,z,prev,bi]);
-  if(meshes.has(k)){ blocksGroup.remove(meshes.get(k)); meshes.delete(k); }
-  if(bi===null){ world.delete(k); prices.delete(k); shops.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay) prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); else prices.delete(k); if(BLOCKS[bi].counter) shops.set(k,{price:Math.max(1,Math.min(999,+($('shopPrice')?.value)||25)),item:($('shopItem')?.value||'Mystery item').trim().slice(0,24)||'Mystery item'}); else shops.delete(k); addMesh(x,y,z,bi); } dirty=true; }
+  if(bi===null){ world.delete(k); prices.delete(k); shops.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay) prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); else prices.delete(k); if(BLOCKS[bi].counter) shops.set(k,{price:Math.max(1,Math.min(999,+($('shopPrice')?.value)||25)),item:($('shopItem')?.value||'Mystery item').trim().slice(0,24)||'Mystery item'}); else shops.delete(k); } instDirty=true; dirty=true; }
 function begin(){ pending=[]; } function commit(){ if(pending&&pending.length){ undoStack.push(pending); if(undoStack.length>200) undoStack.shift(); redoStack.length=0; } pending=null; hud(); }
 function undo(){ const a=undoStack.pop(); if(!a) return; for(let i=a.length-1;i>=0;i--){ const [x,y,z,p]=a[i]; setBlock(x,y,z,p,false); } redoStack.push(a); hud(); toast('Undo'); }
 function redo(){ const a=redoStack.pop(); if(!a) return; for(const [x,y,z,,n] of a) setBlock(x,y,z,n,false); undoStack.push(a); hud(); toast('Redo'); }
@@ -279,16 +300,16 @@ const ghost=new THREE.Mesh(geo,ghostMat); ghost.visible=false; scene.add(ghost);
 const stampGroup=new THREE.Group(); scene.add(stampGroup);
 function rot(x,z,r){ for(let i=0;i<r;i++){ [x,z]=[-z,x]; } return [x,z]; }
 function stampBlocks(){ if(!stamp) return []; return stamp.blocks.map(([x,y,z,id])=>{ const [rx,rz]=rot(x,z,stampRot); return [rx,y,rz,BIDX[id]]; }); }
-function showStamp(ox,oy,oz){ stampGroup.clear(); stampGroup.position.set(ox,oy,oz); for(const [x,y,z,bi] of stampBlocks()){ const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:BLOCKS[bi].c,transparent:true,opacity:.55,depthWrite:false})); m.position.set(x+.5,y+.5,z+.5); stampGroup.add(m); } stampGroup.visible=true; }
+function showStamp(ox,oy,oz){ stampGroup.clear(); stampGroup.position.set(ox,oy,oz); const all=stampBlocks(); const list=all.length>400?all.filter((_,i)=>i%Math.ceil(all.length/400)===0):all; for(const [x,y,z,bi] of list){ const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:BLOCKS[bi].c,transparent:true,opacity:.55,depthWrite:false})); m.position.set(x+.5,y+.5,z+.5); stampGroup.add(m); } stampGroup.visible=true; }
 
 // avatar reference: a player is ~1.4 wide and 3.4 tall — doors need 2 wide x 4 tall
 const avatarRef=new THREE.Group(); { const m=new THREE.MeshBasicMaterial({color:0x1d2433,transparent:true,opacity:.35}); const body=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.4,.8),m); body.position.y=1.2; const head=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),m); head.position.y=2.9; avatarRef.add(body,head); const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.4,3.4,1.4)),new THREE.LineBasicMaterial({color:0x1d2433})); edges.position.y=1.7; avatarRef.add(edges); } avatarRef.visible=false; scene.add(avatarRef);
 let showAvatar=false; $('bAvatar').onclick=()=>{ showAvatar=!showAvatar; $('bAvatar').classList.toggle('on',showAvatar); avatarRef.visible=showAvatar; if(showAvatar) toast('Doors need to be 2 blocks wide and 4 tall for the avatar to fit'); };
 // =============== RAYCAST ===============
 const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2();
-function hit(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ptr.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); const hs=ray.intersectObjects([groundMesh,...blocksGroup.children]); return hs[0]||null; }
-function cellFromHit(h,adjacent){ const n=h.face.normal.clone(); if(h.object.userData.ground){ const p=h.point; return [Math.floor(p.x),0,Math.floor(p.z)]; } const p=h.object.position.clone().subScalar(.5); if(adjacent) p.add(n); return [Math.round(p.x),Math.round(p.y),Math.round(p.z)]; }
-function applyTool(h,t){ if(!h) return; if(t==='pick'){ if(h.object.userData.ground) return; cur=world.get(h.object.userData.k); renderPal(); return; }
+function hit(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ptr.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); const hs=ray.intersectObjects([groundMesh,...blocksGroup.children.filter(o=>o.visible)]); const h=hs[0]||null; if(h&&!h.object.userData.ground&&!hitInfo(h)) return null; return h; }
+function cellFromHit(h,adjacent){ const n=h.face.normal.clone(); if(h.object.userData.ground){ const p=h.point; return [Math.floor(p.x),0,Math.floor(p.z)]; } const i=hitInfo(h); const p=new THREE.Vector3(i.x,i.y,i.z); if(adjacent) p.add(n); return [Math.round(p.x),Math.round(p.y),Math.round(p.z)]; }
+function applyTool(h,t){ if(!h) return; if(t==='pick'){ if(h.object.userData.ground) return; const i=hitInfo(h); if(i) cur=world.get(i.k); renderPal(); return; }
   if(t==='build'){ if(h.object.userData.ground&&h.face.normal.y<=0) return; const [x,y,z]=cellFromHit(h,true); brushAt(x,y,z,(bx,by,bz)=>{ if(by>=0) setBlock(bx,by,bz,cur); }); }
   else if(t==='erase'){ if(h.object.userData.ground) return; const [x,y,z]=cellFromHit(h,false); brushAt(x,y,z,(bx,by,bz)=>setBlock(bx,by,bz,null)); }
   else if(t==='paint'){ if(h.object.userData.ground) return; const [x,y,z]=cellFromHit(h,false); brushAt(x,y,z,(bx,by,bz)=>{ if(world.has(key(bx,by,bz))) setBlock(bx,by,bz,cur); }); } }
@@ -303,7 +324,7 @@ cv.addEventListener('pointermove',e=>{ if(drag){ const dx=e.clientX-drag.x, dy=e
     if(drag.b===2||drag.shift){ const s=orbit.dist*.0016; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw)); orbit.target.addScaledVector(right,-dx*s).addScaledVector(fwd,-dy*s); }
     else { orbit.yaw-=dx*.006; orbit.pitch=Math.max(.05,Math.min(1.5,orbit.pitch+dy*.006)); }
     drag.x=e.clientX; drag.y=e.clientY; }
-  const h=hit(e.clientX,e.clientY); hover(h); });
+  if(e.pointerType==='touch'&&drag) return; const h=hit(e.clientX,e.clientY); hover(h); });
 cv.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; if(moved) return; const h=hit(e.clientX,e.clientY);
   if(stamp){ if(h){ const [x,y,z]=cellFromHit(h,true); const oy=h.object.userData.ground?0:y; begin(); for(const [bx,by,bz,bi] of stampBlocks()) setBlock(x+bx,oy+by,z+bz,bi); commit(); toast(stamp.name+' placed'); } if(!e.shiftKey&&!IS_TOUCH){ stamp=null; stampGroup.visible=false; renderBld(); } return; }
   let t=tool; if(d.b===2) t='erase'; else if(d.b===1) t='pick'; begin(); applyTool(h,t); commit(); });
@@ -340,13 +361,14 @@ document.querySelectorAll('#mTabs button').forEach(b=>b.onclick=()=>{ closeDrawe
 const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
 // ---- right-edge drawer: swipe in from the right edge to open the block menu, swipe right (or tap outside) to close ----
 const aside=document.querySelector('aside'); const openDrawer=()=>aside.classList.add('open'); const closeDrawer=()=>aside.classList.remove('open');
-$('edgeTab').onclick=openDrawer; $('scrim').onclick=closeDrawer;
+$('edgeTab').onclick=openDrawer; $('fabBlocks').onclick=openDrawer; $('scrim').onclick=closeDrawer;
 let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; const fromEdge=innerWidth-t.clientX; if(!aside.classList.contains('open')&&fromEdge<28) sw={x:t.clientX,y:t.clientY,mode:'open'}; else if(aside.classList.contains('open')&&aside.contains(e.target)) sw={x:t.clientX,y:t.clientY,mode:'close'}; else sw=null; },{passive:true});
 addEventListener('touchmove',e=>{ if(!sw) return; const t=e.touches[0]; const dx=t.clientX-sw.x, dy=t.clientY-sw.y; if(Math.abs(dy)>Math.abs(dx)*1.3) return; if(sw.mode==='open'&&dx<-40){ openDrawer(); sw=null; } else if(sw.mode==='close'&&dx>50){ closeDrawer(); sw=null; } },{passive:true});
 addEventListener('touchend',()=>{ sw=null; });
 
 // =============== UI RENDER ===============
-function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); if(IS_TOUCH&&!BLOCKS[i].pay&&!BLOCKS[i].counter) closeDrawer(); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; }
+function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ if(b.pay||b.counter) return; const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); if(IS_TOUCH&&!BLOCKS[i].pay&&!BLOCKS[i].counter) closeDrawer(); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; $('mPay').classList.toggle('on',!!BLOCKS[cur].pay); $('mShop').classList.toggle('on',!!BLOCKS[cur].counter); }
+$('mPay').onclick=()=>{ cur=BIDX.pay; renderPal(); setTool('build'); toast('Tap where you want the gate · set the price below'); }; $('mShop').onclick=()=>{ cur=BIDX.counter; renderPal(); setTool('build'); toast('Tap where the counter goes · name the item & price below'); };
 function renderBld(){ $('rotQuick').style.display=stamp?'flex':'none'; const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast(IS_TOUCH?'Tap the ground to place it':'Click the ground to place · R rotates · Shift keeps stamping'); if(mSheet.classList.contains('show')) closeSheet(); } renderBld(); }; el.appendChild(btn); }); }
 function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
@@ -362,7 +384,7 @@ $('bOpen').onclick=()=>{ const i=document.createElement('input'); i.type='file';
 $('bNew').onclick=()=>{ if(world.size&&!confirm('Start a new world? Unsaved changes will be lost.')) return; clearWorld(false); $('wname').value='My World'; dirty=false; undoStack.length=redoStack.length=0; hud(); };
 $('bClear').onclick=()=>{ if(world.size&&confirm('Remove every block?')) clearWorld(true); };
 $('bUndo').onclick=undo; $('bRedo').onclick=redo;
-$('bShot').onclick=()=>{ renderer.render(scene,camera); renderer.domElement.toBlob(b=>download(($('wname').value||'world')+'.png',b)); toast('Snapshot saved'); };
+$('bShot').onclick=()=>{ if(instDirty) rebuildInstances(); renderer.render(scene,camera); renderer.domElement.toBlob(b=>download(($('wname').value||'world')+'.png',b)); toast('Snapshot saved'); };
 $('bExport').onclick=()=>{ const d=serialize(); // Export as a Blockverse game map: JS object literal that index.html's buildWorld can consume later
   const js=`// Blockverse map export — ${d.name}\n// Drop into Blockverse's WORLDS/MAPS list or load with Studio.\nexport default ${JSON.stringify({name:d.name,ground:d.ground,blocks:d.blocks})};\n`; download((d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'world')+'.map.js',new Blob([js],{type:'text/javascript'})); toast('Exported map'); };
 // ---------- Publish to Blockverse ----------
@@ -397,7 +419,7 @@ try{ const a=localStorage.getItem('bvstudio:auto'); if(a&&confirm('Restore your 
 // =============== LOOP ===============
 function resize(){ const w=view.clientWidth,h=view.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } addEventListener('resize',resize); resize();
 let last=performance.now();
-function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last)/1000); last=now;
+function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last)/1000); last=now; if(instDirty) rebuildInstances();
   const sp=orbit.dist*.6*dt; const right=new THREE.Vector3(Math.cos(orbit.yaw),0,-Math.sin(orbit.yaw)); const fwd=new THREE.Vector3(-Math.sin(orbit.yaw),0,-Math.cos(orbit.yaw));
   if(keys.KeyW) orbit.target.addScaledVector(fwd,sp); if(keys.KeyS) orbit.target.addScaledVector(fwd,-sp); if(keys.KeyA) orbit.target.addScaledVector(right,-sp); if(keys.KeyD) orbit.target.addScaledVector(right,sp);
   const cp=Math.cos(orbit.pitch); camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*cp*orbit.dist, orbit.target.y+Math.sin(orbit.pitch)*orbit.dist, orbit.target.z+Math.cos(orbit.yaw)*cp*orbit.dist); camera.lookAt(orbit.target);
