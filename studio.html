@@ -11,6 +11,8 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;overflow:hidden;background:var(--bg);font-family:"Trebuchet MS",Verdana,sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:none}
   button{font:inherit;color:inherit;cursor:pointer}
+  input,textarea{user-select:text;-webkit-user-select:text;touch-action:auto;font-size:16px}
+  .stepper{display:flex;align-items:center;gap:4px} .stepper button{width:34px;height:34px;border:3px solid var(--ink);border-radius:9px;background:#fff;font-weight:900;font-size:18px;box-shadow:0 2px 0 var(--ink);flex:none} .stepper input{width:64px!important;text-align:center;padding:5px 4px!important}
   #app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:1fr 250px;height:100%}
   header{grid-column:1/3;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px}
   header h1{font-size:18px;font-weight:900;letter-spacing:.3px}
@@ -106,7 +108,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>Block<span>verse</span> Studio <small id="stVer" style="font-size:10px;font-weight:700;color:#8fd3ff;vertical-align:middle">v76</small></h1>
+    <h1>Block<span>verse</span> Studio <small id="stVer" style="font-size:10px;font-weight:700;color:#8fd3ff;vertical-align:middle">v77</small></h1>
     <input id="wname" value="My World" maxlength="24" spellcheck="false">
     <div class="sp"></div>
     <button class="hb" id="bNew">New</button>
@@ -144,8 +146,8 @@
       <div class="lbl">💰 Blockbux <small>earn from players</small></div>
       <div class="money"><button id="mPay" data-bi="pay"><b>$</b>Pay gate<small>blocks the way until paid</small></button><button id="mShop" data-bi="counter"><b>🛒</b>Shop counter<small>sells an item</small></button></div>
       <div id="moneyRows">
-      <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <input type="number" id="shopPrice" min="1" max="999" value="25" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
-      <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <input type="number" id="payPrice" min="1" max="999" value="10" style="width:70px;font:inherit;font-weight:800;padding:4px 6px;border:3px solid var(--ink);border-radius:8px"> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
+      <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;min-width:0;font:inherit;font-weight:800;padding:6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <span class="stepper"><button data-step="shopPrice:-5">−</button><input type="number" inputmode="numeric" id="shopPrice" min="1" max="999" value="25" style="font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:8px"><button data-step="shopPrice:5">+</button></span> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
+      <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <span class="stepper"><button data-step="payPrice:-5">−</button><input type="number" inputmode="numeric" id="payPrice" min="1" max="999" value="10" style="font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:8px"><button data-step="payPrice:5">+</button></span> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
       </div>
     </div>
     <div class="panel" id="pBlocks">
@@ -289,7 +291,7 @@ function rebuildInstances(){ instDirty=false; const buckets=BLOCKS.map(()=>[]); 
 function hitInfo(h){ if(!h) return null; if(h.object.userData.ground) return {ground:true}; const k=instKeys[h.object.userData.bi]?.[h.instanceId]; if(k==null) return null; const [x,y,z]=k.split(',').map(Number); return {k,x,y,z}; }
 function setBlock(x,y,z,bi,record=true){ const k=key(x,y,z); const prev=world.has(k)?world.get(k):null; if(prev===bi) return; if(y<0||y>128||Math.abs(x)>200||Math.abs(z)>200) return;
   if(record&&pending) pending.push([x,y,z,prev,bi]);
-  if(bi===null){ world.delete(k); prices.delete(k); shops.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay) prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); else prices.delete(k); if(BLOCKS[bi].counter) shops.set(k,{price:Math.max(1,Math.min(999,+($('shopPrice')?.value)||25)),item:($('shopItem')?.value||'Mystery item').trim().slice(0,24)||'Mystery item'}); else shops.delete(k); } instDirty=true; dirty=true; }
+  if(bi===null){ world.delete(k); prices.delete(k); shops.delete(k); } else { world.set(k,bi); if(BLOCKS[bi].pay){ prices.set(k,Math.max(1,Math.min(999,+($('payPrice')?.value)||10))); lastPlaced=k; } else prices.delete(k); if(BLOCKS[bi].counter){ shops.set(k,{price:Math.max(1,Math.min(999,+($('shopPrice')?.value)||25)),item:($('shopItem')?.value||'Mystery item').trim().slice(0,24)||'Mystery item'}); lastPlaced=k; } else shops.delete(k); } instDirty=true; dirty=true; }
 function begin(){ pending=[]; } function commit(){ if(pending&&pending.length){ undoStack.push(pending); if(undoStack.length>200) undoStack.shift(); redoStack.length=0; } pending=null; hud(); }
 function undo(){ const a=undoStack.pop(); if(!a) return; for(let i=a.length-1;i>=0;i--){ const [x,y,z,p]=a[i]; setBlock(x,y,z,p,false); } redoStack.push(a); hud(); toast('Undo'); }
 function redo(){ const a=redoStack.pop(); if(!a) return; for(const [x,y,z,,n] of a) setBlock(x,y,z,n,false); undoStack.push(a); hud(); toast('Redo'); }
@@ -362,15 +364,20 @@ const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
 // ---- right-edge drawer: swipe in from the right edge to open the block menu, swipe right (or tap outside) to close ----
 const aside=document.querySelector('aside'); const openDrawer=()=>aside.classList.add('open'); const closeDrawer=()=>aside.classList.remove('open');
 $('edgeTab').onclick=openDrawer; $('fabBlocks').onclick=openDrawer; $('scrim').onclick=closeDrawer;
-let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; const fromEdge=innerWidth-t.clientX; if(!aside.classList.contains('open')&&fromEdge<28) sw={x:t.clientX,y:t.clientY,mode:'open'}; else if(aside.classList.contains('open')&&aside.contains(e.target)) sw={x:t.clientX,y:t.clientY,mode:'close'}; else sw=null; },{passive:true});
+let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; const fromEdge=innerWidth-t.clientX; if(!aside.classList.contains('open')&&fromEdge<28) sw={x:t.clientX,y:t.clientY,mode:'open'}; else if(aside.classList.contains('open')&&aside.contains(e.target)&&!/INPUT|BUTTON/.test(e.target.tagName)) sw={x:t.clientX,y:t.clientY,mode:'close'}; else sw=null; },{passive:true});
 addEventListener('touchmove',e=>{ if(!sw) return; const t=e.touches[0]; const dx=t.clientX-sw.x, dy=t.clientY-sw.y; if(Math.abs(dy)>Math.abs(dx)*1.3) return; if(sw.mode==='open'&&dx<-40){ openDrawer(); sw=null; } else if(sw.mode==='close'&&dx>50){ closeDrawer(); sw=null; } },{passive:true});
 addEventListener('touchend',()=>{ sw=null; });
 
 // =============== UI RENDER ===============
 function renderPal(){ const el=$('pal'); el.innerHTML=''; BLOCKS.forEach((b,i)=>{ if(b.pay||b.counter) return; const btn=document.createElement('button'); btn.title=b.name; btn.className=i===cur?'on':''; const sw=document.createElement('i'); sw.className=b.id==='glass'?'glass':b.id==='lava'?'lava':b.glow?'glow':''; if(!sw.className) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); if(b.glow) sw.style.background='#'+b.c.toString(16).padStart(6,'0'); btn.appendChild(sw); if(b.counter){ sw.textContent='🛒'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-size:14px'; } if(b.pay){ sw.textContent='$'; sw.style.cssText+=';display:flex;align-items:center;justify-content:center;font-weight:900;color:#1d2433'; } btn.onclick=()=>{ cur=i; renderPal(); if(tool==='erase'||tool==='pick') setTool('build'); if(IS_TOUCH&&!BLOCKS[i].pay&&!BLOCKS[i].counter) closeDrawer(); }; el.appendChild(btn); }); $('payRow').style.display=BLOCKS[cur].pay?'flex':'none'; $('shopRow').style.display=BLOCKS[cur].counter?'block':'none'; $('mPay').classList.toggle('on',!!BLOCKS[cur].pay); $('mShop').classList.toggle('on',!!BLOCKS[cur].counter); }
+document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ const [id,d]=b.dataset.step.split(':'); const el=$(id); el.value=Math.max(1,Math.min(999,(+el.value||0)+(+d))); el.dispatchEvent(new Event('input')); });
+// live-update the price of the most recently placed gate/counter while it's still selected
+let lastPlaced=null; $('payPrice').addEventListener('input',()=>{ if(lastPlaced&&prices.has(lastPlaced)){ prices.set(lastPlaced,Math.max(1,Math.min(999,+$('payPrice').value||10))); dirty=true; hud(); } });
+$('shopPrice').addEventListener('input',()=>{ if(lastPlaced&&shops.has(lastPlaced)){ shops.get(lastPlaced).price=Math.max(1,Math.min(999,+$('shopPrice').value||25)); dirty=true; hud(); } });
+$('shopItem').addEventListener('input',()=>{ if(lastPlaced&&shops.has(lastPlaced)){ shops.get(lastPlaced).item=($('shopItem').value||'Mystery item').trim().slice(0,24)||'Mystery item'; dirty=true; } });
 $('mPay').onclick=()=>{ cur=BIDX.pay; renderPal(); setTool('build'); toast('Tap where you want the gate · set the price below'); }; $('mShop').onclick=()=>{ cur=BIDX.counter; renderPal(); setTool('build'); toast('Tap where the counter goes · name the item & price below'); };
 function renderBld(){ $('rotQuick').style.display=stamp?'flex':'none'; const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast(IS_TOUCH?'Tap the ground to place it':'Click the ground to place · R rotates · Shift keeps stamping'); if(mSheet.classList.contains('show')) closeSheet(); } renderBld(); }; el.appendChild(btn); }); }
-function hud(){ $('hud').textContent=world.size+' blocks'+(dirty?' · unsaved':''); }
+function hud(){ $('hud').textContent=world.size+' blocks'+(prices.size?' · '+prices.size+' gate'+(prices.size>1?'s':''):'')+(shops.size?' · '+shops.size+' shop'+(shops.size>1?'s':''):'')+(dirty?' · unsaved':''); }
 let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 
 // =============== SAVE / LOAD ===============
