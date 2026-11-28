@@ -1,0 +1,13 @@
+{
+  "appId": "com.blockverse.avatarcreator",
+  "productName": "Blockverse Avatar Creator",
+  "artifactName": "Blockverse-Avatar-Creator.${ext}",
+  "extraMetadata": { "main": "main-avatar.js", "name": "blockverse-avatar-creator", "productName": "Blockverse Avatar Creator", "description": "Design and sell avatar items for Blockverse." },
+  "files": ["main-avatar.js", "preload.js", "app-avatar/**/*"],
+  "directories": { "output": "dist-avatar" },
+  "fileAssociations": [{ "ext": "bvi", "name": "Blockverse Item", "role": "Editor" }],
+  "win":   { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+  "nsis":  { "oneClick": false, "allowToChangeInstallationDirectory": true, "artifactName": "Blockverse-Avatar-Creator-Setup.exe" },
+  "mac":   { "target": [{ "target": "dmg", "arch": ["universal"] }], "category": "public.app-category.graphics-design", "hardenedRuntime": false, "identity": null },
+  "linux": { "target": [{ "target": "AppImage", "arch": ["x64"] }], "category": "Graphics" }
+}

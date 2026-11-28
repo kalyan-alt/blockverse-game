@@ -12,7 +12,10 @@
     "prepare-app": "node copy-app.js",
     "dist:win": "npm run prepare-app && electron-builder --win --publish never",
     "dist:mac": "npm run prepare-app && electron-builder --mac --publish never",
-    "dist:linux": "npm run prepare-app && electron-builder --linux --publish never"
+    "dist:linux": "npm run prepare-app && electron-builder --linux --publish never",
+    "dista:win": "npm run prepare-app && electron-builder --win --publish never --config electron-builder-avatar.json",
+    "dista:mac": "npm run prepare-app && electron-builder --mac --publish never --config electron-builder-avatar.json",
+    "dista:linux": "npm run prepare-app && electron-builder --linux --publish never --config electron-builder-avatar.json"
   },
   "devDependencies": {
     "electron": "^33.0.0",
