@@ -108,7 +108,7 @@
 <body>
 <div id="app">
   <header>
-    <h1>Block<span>verse</span> Studio <small id="stVer" style="font-size:10px;font-weight:700;color:#8fd3ff;vertical-align:middle">v77</small></h1>
+    <h1>Block<span>verse</span> Studio <small id="stVer" style="font-size:10px;font-weight:700;color:#8fd3ff;vertical-align:middle">v79</small></h1>
     <input id="wname" value="My World" maxlength="24" spellcheck="false">
     <div class="sp"></div>
     <button class="hb" id="bNew">New</button>
@@ -147,7 +147,7 @@
       <div class="money"><button id="mPay" data-bi="pay"><b>$</b>Pay gate<small>blocks the way until paid</small></button><button id="mShop" data-bi="counter"><b>🛒</b>Shop counter<small>sells an item</small></button></div>
       <div id="moneyRows">
       <div id="shopRow" style="display:none;margin-top:8px"><div class="rng">🛒 Sells <input type="text" id="shopItem" maxlength="24" value="Mystery item" style="flex:1;min-width:0;font:inherit;font-weight:800;padding:6px;border:3px solid var(--ink);border-radius:8px"></div><div class="rng" style="margin-top:6px">for <span class="stepper"><button data-step="shopPrice:-5">−</button><input type="number" inputmode="numeric" id="shopPrice" min="1" max="999" value="25" style="font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:8px"><button data-step="shopPrice:5">+</button></span> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div></div>
-      <div id="payRow" style="display:none;margin-top:8px" class="rng">💰 Price <span class="stepper"><button data-step="payPrice:-5">−</button><input type="number" inputmode="numeric" id="payPrice" min="1" max="999" value="10" style="font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:8px"><button data-step="payPrice:5">+</button></span> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
+      <div id="payRow" style="display:none;margin-top:8px" class="rng"><button id="payPriceLbl" style="background:none;border:0;padding:0;font:inherit;font-weight:800;text-decoration:underline dotted">💰 Price</button> <span class="stepper"><button data-step="payPrice:-5">−</button><input type="number" inputmode="numeric" id="payPrice" min="1" max="999" value="10" style="font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:8px"><button data-step="payPrice:5">+</button></span> <span style="font-size:11px;color:var(--muted)">Blockbux · paid to you</span></div>
       </div>
     </div>
     <div class="panel" id="pBlocks">
@@ -375,6 +375,7 @@ document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{ const [id,d]
 let lastPlaced=null; $('payPrice').addEventListener('input',()=>{ if(lastPlaced&&prices.has(lastPlaced)){ prices.set(lastPlaced,Math.max(1,Math.min(999,+$('payPrice').value||10))); dirty=true; hud(); } });
 $('shopPrice').addEventListener('input',()=>{ if(lastPlaced&&shops.has(lastPlaced)){ shops.get(lastPlaced).price=Math.max(1,Math.min(999,+$('shopPrice').value||25)); dirty=true; hud(); } });
 $('shopItem').addEventListener('input',()=>{ if(lastPlaced&&shops.has(lastPlaced)){ shops.get(lastPlaced).item=($('shopItem').value||'Mystery item').trim().slice(0,24)||'Mystery item'; dirty=true; } });
+$('payPriceLbl').onclick=()=>{ const v=prompt('Price in Blockbux (1–999):',$('payPrice').value); if(v===null) return; $('payPrice').value=Math.max(1,Math.min(999,parseInt(v,10)||10)); $('payPrice').dispatchEvent(new Event('input')); toast('Gate price: '+$('payPrice').value+' Blockbux'); };
 $('mPay').onclick=()=>{ cur=BIDX.pay; renderPal(); setTool('build'); toast('Tap where you want the gate · set the price below'); }; $('mShop').onclick=()=>{ cur=BIDX.counter; renderPal(); setTool('build'); toast('Tap where the counter goes · name the item & price below'); };
 function renderBld(){ $('rotQuick').style.display=stamp?'flex':'none'; const el=$('bld'); el.innerHTML=''; BUILDINGS.forEach(b=>{ const btn=document.createElement('button'); btn.className=stamp&&stamp.id===b.id?'on':''; btn.innerHTML=`<b>${b.e}</b>${b.name}<small>${b.f().length} blocks</small>`; btn.onclick=()=>{ if(stamp&&stamp.id===b.id){ stamp=null; stampGroup.visible=false; } else { stamp={id:b.id,name:b.name,blocks:b.f()}; toast(IS_TOUCH?'Tap the ground to place it':'Click the ground to place · R rotates · Shift keeps stamping'); if(mSheet.classList.contains('show')) closeSheet(); } renderBld(); }; el.appendChild(btn); }); }
 function hud(){ $('hud').textContent=world.size+' blocks'+(prices.size?' · '+prices.size+' gate'+(prices.size>1?'s':''):'')+(shops.size?' · '+shops.size+' shop'+(shops.size>1?'s':''):'')+(dirty?' · unsaved':''); }
@@ -404,7 +405,7 @@ $('pubGo').onclick=()=>{ const d=serialize(); d.name=$('pubName').value.trim().s
   const w={name:d.name,author:d.author,cat:pubCat,online:$('pubOnline').checked,ground:d.ground,blocks:d.blocks,pays:d.pays,shops:d.shops};
   if((d.pays.length||d.shops.length)&&!d.author){ toast('Add your builder name so pay gates can pay you'); $('pubAuthor').focus(); return; }
   // 1) same-origin publish: the game reads this list directly
-  try{ const key='bv_studio_worlds'; const list=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>!(x.name===w.name&&x.author===w.author)); list.unshift({id:'w'+Date.now().toString(36),...w,mine:true,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
+  try{ const key='bv_studio_worlds'; const before=JSON.parse(localStorage.getItem(key)||'[]'); const list=before.filter(x=>x.name.toLowerCase()!==w.name.toLowerCase()); if(list.length<before.length) toast('Replaced the older "'+w.name+'"'); list.unshift({id:'w'+Date.now().toString(36),...w,mine:true,created:Date.now()}); localStorage.setItem(key,JSON.stringify(list.slice(0,40))); }catch{}
   // 2) share link: works for anyone, anywhere (and for the desktop app)
   const link=GAME_URL+'#world='+pubEncode(w); $('pubLink').value=link; $('pubGo').style.display='none'; $('pubDone').style.display='';
   $('pubPlay').onclick=()=>{ if(window.studio) window.open(link); else location.href=link; };
