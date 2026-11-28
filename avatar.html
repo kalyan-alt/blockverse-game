@@ -42,9 +42,12 @@
   .pubSub{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:8px} .pubOk{font-weight:900;font-size:16px;color:#157a56;margin:10px 0 6px}
   #pubLink{width:100%;font-weight:700;font-size:12px;padding:8px 10px;border:3px solid var(--ink);border-radius:10px}
   #fab,#scrim{display:none}
+  @media(min-width:901px) and (pointer:fine){ #pFile{display:none} }
   @media(max-width:900px),(pointer:coarse){
     #app{grid-template-columns:1fr}
-    header h1{font-size:14px} header input{width:96px;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
+    header h1{font-size:14px} header h1 small{display:none} header input{flex:1;min-width:60px;width:auto;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
+    header #bNew,header #bOpen,header #bSave{display:none}
+    #fileQuick{display:flex!important}
     aside{position:fixed;top:52px;right:0;bottom:0;width:min(280px,86vw);z-index:25;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 0 #1d243322}
     aside.open{transform:translateX(0)}
     #scrim{position:fixed;inset:0;top:52px;z-index:23} aside.open~#scrim{display:block}
@@ -52,13 +55,14 @@
     #fab small{font-size:9px;font-weight:900} aside.open~#fab{display:none}
     #quick{display:flex!important}
   }
+  #fileQuick{display:none;position:absolute;right:10px;top:10px;gap:6px} #fileQuick button{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
   #quick{display:none;position:absolute;left:10px;top:10px;gap:6px} #quick button{width:44px;height:44px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-size:17px;font-weight:900} #quick button.on{background:var(--sun)}
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <h1>Avatar <span>Creator</span> <small>v2</small></h1>
+    <h1>Avatar <span>Creator</span> <small>v3</small></h1>
     <input id="iname" value="My Item" maxlength="24" spellcheck="false">
     <div class="sp"></div>
     <button class="hb" id="bNew">New</button>
@@ -68,6 +72,7 @@
   </header>
   <div id="view">
     <div id="quick"><button data-t="add" class="on">+</button><button data-t="erase">−</button><button data-t="paint">🖌</button></div>
+    <div id="fileQuick"><button data-file="bNew">🆕 New</button><button data-file="bOpen">📂 Open</button><button data-file="bSave">💾 Save</button></div>
     <div id="hud">0 blocks</div>
     <div id="toast"></div>
     <div id="pub"><div class="pubCard"><h2>🚀 Publish to the Avatar shop</h2><div class="pubSub">Your item appears under <b>Avatar → ✨ Community</b> in Blockverse. Players who buy it pay you the Blockbux.</div>
@@ -76,6 +81,8 @@
       <div id="pubDone" style="display:none"><div class="pubOk">✅ Published!</div><input id="pubLink" readonly><div class="row" style="margin-top:8px"><button id="pubCopy">📋 Copy link</button><button id="pubPlay" class="go">▶ Open Blockverse</button></div></div></div></div>
   </div>
   <aside>
+    <div class="panel" id="pFile"><div class="lbl">File <small>.bvi items</small></div><div class="seg"><button data-file="bNew">🆕 New</button><button data-file="bOpen">📂 Open</button><button data-file="bSave">💾 Save</button></div>
+      <div class="help" style="margin-top:6px">Open imports a <b>.bvi</b> item file. Save downloads one you can share or keep.</div></div>
     <div class="panel"><div class="lbl">Item type</div><div class="seg" id="slot"><button data-s="head" class="on">🎩 Head</button><button data-s="body">👕 Body</button><button data-s="legs">👖 Legs</button></div></div>
     <div class="panel"><div class="lbl">Tools <small>1–4</small></div><div class="seg four" id="tools"><button data-t="add" class="on">Add</button><button data-t="erase">Erase</button><button data-t="paint">Paint</button><button data-t="pick">Pick</button></div>
       <div class="row" style="margin-top:8px"><button id="bMirror" class="on">⇆ Mirror: ON</button><button id="bUndo">↶</button><button id="bRedo">↷</button></div></div>
@@ -222,6 +229,7 @@ $('pubGo').onclick=()=>{ const name=$('pubName').value.trim().slice(0,24)||'My I
 // ---------- mobile drawer ----------
 const aside=document.querySelector('aside'); const openDrawer=()=>aside.classList.add('open'); function closeDrawer(){ aside.classList.remove('open'); }
 $('fab').onclick=openDrawer; $('scrim').onclick=closeDrawer;
+document.querySelectorAll('[data-file]').forEach(b=>b.onclick=()=>{ closeDrawer(); $(b.dataset.file).click(); });
 let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; if(!aside.classList.contains('open')&&innerWidth-t.clientX<26) sw={x:t.clientX,m:'o'}; else if(aside.classList.contains('open')&&aside.contains(e.target)&&!/INPUT|BUTTON/.test(e.target.tagName)) sw={x:t.clientX,m:'c'}; else sw=null; },{passive:true});
 addEventListener('touchmove',e=>{ if(!sw) return; const dx=e.touches[0].clientX-sw.x; if(sw.m==='o'&&dx<-40){ openDrawer(); sw=null; } else if(sw.m==='c'&&dx>50){ closeDrawer(); sw=null; } },{passive:true});
 setInterval(()=>{ if(dirty&&vox.size){ try{ localStorage.setItem('bvavatar:auto',JSON.stringify(serialize())); }catch{} } },15000);
