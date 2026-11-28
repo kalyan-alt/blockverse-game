@@ -52,6 +52,7 @@
   .frChip{flex:none;display:flex;align-items:center;gap:6px;background:var(--bg);border:2px solid #cfd6e3;border-radius:999px;padding:5px 10px 5px 6px;font-weight:800;font-size:12px}
   .frChip .dot{width:9px;height:9px;border-radius:50%;background:#cfd6e3} .frChip .dot.on{background:var(--mint)} .frChip.req{border-color:var(--lava);background:#fff3f1}
   .frChip small{color:var(--muted);font-weight:700;font-size:10px}
+  .cuActs{display:flex;gap:10px;justify-content:center;margin-top:4px;font-size:12px}
   .studioRow{display:flex;gap:14px;align-items:flex-start}
   .studioArt{width:84px;height:84px;flex:none;border:3px solid var(--ink);border-radius:14px;background:linear-gradient(135deg,#8fd3ff,#8c6cff);display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 4px 0 var(--ink)}
   .dl{display:flex;flex-wrap:wrap;gap:8px}
@@ -337,7 +338,7 @@
 <!-- ============ HOME ============ -->
 <div id="home">
   <div id="topbar">
-    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v79</span></div>
+    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v82</span></div>
     <button class="chip" id="chipBuy" style="border:0"><svg class="bux" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><span id="bitsTop">0</span><span style="opacity:.7;font-size:16px;line-height:1">+</span></button>
     <button id="avatarBtn" title="Account"><canvas id="avMini" width="72" height="72"></canvas></button>
   </div>
@@ -350,6 +351,23 @@
       <div class="gtabs" id="gameTabs"><button class="on" data-g="all">All</button><button data-g="obby">Obbies</button><button data-g="online">Online</button><button data-g="solo">Solo</button><button data-g="combat">Combat</button><button data-g="survival">Survival</button><button data-g="studio">🧱 Studio</button></div>
       <div class="grid" id="gameGrid"></div>
       <div class="catbar" style="display:none" id="gameEmpty"><div class="lbl" style="color:var(--muted);font-weight:700">No games match that. Try another word.</div></div>
+      <h2 style="margin-top:22px">Blockverse Avatar Creator</h2>
+      <div class="panel" id="avatarCreatorPanel">
+        <div class="studioRow">
+          <div class="studioArt" style="background:linear-gradient(135deg,#ff7ab8,#8c6cff)">🎩</div>
+          <div style="flex:1">
+            <div style="font-weight:900;font-size:17px">Design hats, outfits and legs</div>
+            <div class="sub" style="margin:4px 0 10px">Build avatar items block by block, set a Blockbux price, and publish them to the Avatar shop. You earn when players buy them.</div>
+            <div class="dl">
+              <a class="buy" href="avatar.html">▶ Open in browser</a>
+              <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator-Setup.exe">⊞ Windows <small>.exe</small></a>
+              <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator.dmg"> Mac <small>.dmg</small></a>
+              <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator.AppImage">🐧 Linux <small>.AppImage</small></a>
+              <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator.apk">🤖 Android <small>.apk</small></a>
+            </div>
+          </div>
+        </div>
+      </div>
       <h2 style="margin-top:22px">Blockverse Studio</h2>
       <div class="panel" id="studioPanel">
         <div class="studioRow">
@@ -375,7 +393,7 @@
       <div class="panel">
         <div class="lbl" style="font-weight:800">Catalog</div>
         <div class="catbar"><input type="text" id="catSearch" placeholder="Search heads, bodies, legs…"></div>
-        <div class="cattabs"><button class="on" data-c="all">All</button><button data-c="head">Heads</button><button data-c="body">Bodies</button><button data-c="legs">Legs</button></div>
+        <div class="cattabs"><button class="on" data-c="all">All</button><button data-c="head">Heads</button><button data-c="body">Bodies</button><button data-c="legs">Legs</button><button data-c="community">✨ Community</button></div>
         <div class="items" id="catGrid"></div>
         <p class="hint">Tap an item to buy it with Blockbux, tap again to wear it. Free items are already yours.</p>
       </div>
@@ -585,7 +603,7 @@ function renderGrid(){ grid.innerHTML=''; const q=((document.getElementById('gam
 
 // tabs
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+b.dataset.s).classList.add('active'); if(b.dataset.s==='avatar') drawPreview(); if(b.dataset.s==='account') friendsRefresh(); });
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+b.dataset.s).classList.add('active'); if(b.dataset.s==='avatar'){ drawPreview(); shopRefresh(); } if(b.dataset.s==='account') friendsRefresh(); });
 document.getElementById('avatarBtn').onclick=()=>document.querySelector('[data-s=account]').click();
 // ---------- accounts ----------
 const BANNED_WORDS=['fuck','shit','bitch','cunt','dick','cock','pussy','asshole','nigg','fag','retard','whore','slut','rape','nazi','hitler','porn','sex','penis','vagina','boob','kys','hoe','twat','wank','cum','damn','bastard','douche','pedo','molest'];
@@ -609,7 +627,7 @@ async function refreshMod(){ try{ const r=await fetch(SERVER_HTTP+'/mod/list?tok
 document.getElementById('modGo').onclick=async()=>{ const body={token:authToken,action:document.getElementById('modAction').value,user:document.getElementById('modUser').value.trim(),minutes:+document.getElementById('modMin').value||0,reason:document.getElementById('modReason').value.trim()}; try{ const r=await fetch(SERVER_HTTP+'/mod',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); const d=await r.json(); document.getElementById('modMsg').textContent=d.msg||d.error; refreshMod(); }catch(e){ document.getElementById('modMsg').textContent=e.message; } };
 document.getElementById('modRefresh').onclick=refreshMod;
 document.getElementById('modClear').onclick=async()=>{ await fetch(SERVER_HTTP+'/mod/clearreports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken})}).catch(()=>{}); refreshMod(); };
-function applyProfile(name,pr){ googleLinked=!!(pr&&pr.googleLinked); setTimeout(refreshGoogleLink,0); setTimeout(friendsRefresh,300); acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
+function applyProfile(name,pr){ googleLinked=!!(pr&&pr.googleLinked); setTimeout(refreshGoogleLink,0); setTimeout(friendsRefresh,300); setTimeout(shopRefresh,600); acct.name=name; acct.bits=pr.bits??40; acct.items=new Set(pr.items||['cap','none','shirt','pants']); acct.wear=pr.wear||{head:'cap',body:'shirt',legs:'pants'}; acct.shirt=pr.shirt??0; acct.pants=pr.pants??1; acct.hat=pr.hat??2; acct.owned=new Set(pr.owned||[0,1,2,3]); acct.coins=pr.coins||0; acct.wins=pr.wins||0; acct.deaths=pr.deaths||0; acct.best=pr.best||{}; acct.boost=pr.boost||0; renderBoost(); acct.gear=new Set(pr.gear||['blaster','sidearm','bat','bomb']); for(const k of SLOTS){ if(!acct.gear.has(loadout[k].id)) loadout[k]=GEAR[k].find(w=>acct.gear.has(w.id))||GEAR[k][0]; } if(pr.settings){ SET={...SETTINGS_DEF,...pr.settings}; renderSettings(document.getElementById('settingsBox')); applySettings(); }
   document.getElementById('nameShow').textContent=acct.name; fmtBits(); renderSwatches(); renderCatalog(); renderShop(); renderGrid(); drawMini(); drawPreview(); }
 function profileOut(){ return {settings:SET,boost:acct.boost||0,gear:[...acct.gear],bits:acct.bits,items:[...acct.items],wear:acct.wear,shirt:acct.shirt,pants:acct.pants,hat:acct.hat,owned:[...acct.owned],coins:acct.coins,wins:acct.wins,deaths:acct.deaths,best:acct.best}; }
 function markDirty(){ dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(saveProfile,3000); }
@@ -731,11 +749,11 @@ let catFilter='all';
 function seasonActive(season){ const d=new Date(), m=d.getMonth()+1, day=d.getDate(); if(season==='halloween') return (m===10&&day>=15)||(m===11&&day<=2); return true; }
 function seasonLabel(season){ if(season==='halloween') return '🎃 Halloween only · Oct 15 – Nov 2'; return ''; }
 function renderCatalog(){ const q=(document.getElementById('catSearch').value||'').toLowerCase().trim(); const grid=document.getElementById('catGrid'); grid.innerHTML='';
-  const list=CATALOG.filter(c=>(!c.season||seasonActive(c.season)||acct.items.has(c.id))&&(catFilter==='all'||c.cat===catFilter)&&(!q||c.name.toLowerCase().includes(q)||c.tags.includes(q)||c.cat.includes(q)));
+  const list=[...CATALOG,...customCatalog()].filter(c=>(!c.season||seasonActive(c.season)||acct.items.has(c.id))&&(catFilter==='all'||(catFilter==='community'?c.custom:c.cat===catFilter))&&(!q||c.name.toLowerCase().includes(q)||c.tags.includes(q)||c.cat.includes(q)));
   if(!list.length){ grid.innerHTML='<div class="hint">Nothing matches that search.</div>'; return; }
-  for(const c of list){ const owned=acct.items.has(c.id), worn=acct.wear[c.cat]===c.id; const b=document.createElement('button'); b.className='item'+(worn?' worn':'')+(owned?'':' locked');
-    b.innerHTML=`<div class="ic">${c.emoji}</div><div class="nm">${c.name}</div><div class="pr">${worn?'Equipped':owned?'Owned · tap to wear':(c.price.toLocaleString()+' BB'+(acct.bits<c.price?' · need '+(c.price-acct.bits).toLocaleString()+' more':''))}</div><small style="color:${c.season?'#b06a00':'var(--muted)'};font-size:10px;font-weight:${c.season?800:600}">${c.season?seasonLabel(c.season):(c.cat==='head'?'Head':c.cat==='body'?'Body':'Legs')}</small>`; if(c.season) b.style.borderColor='#ff8c42';
-    b.onclick=()=>{ if(!owned){ if(acct.bits<c.price){ toast('Not enough Blockbux',`${c.price-acct.bits} more needed`); return; } acct.bits-=c.price; acct.items.add(c.id); fmtBits(); toast(`${c.emoji} Bought ${c.name}!`,'tap it again to wear'); renderCatalog(); return; }
+  for(const c of list){ const owned=acct.items.has(c.id)||(c.custom&&(c.mine||c.price===0)), worn=acct.wear[c.cat]===c.id; const b=document.createElement('button'); b.className='item'+(worn?' worn':'')+(owned?'':' locked');
+    b.innerHTML=`<div class="ic">${c.emoji}</div><div class="nm">${c.name}</div><div class="pr">${worn?'Equipped':owned?'Owned · tap to wear':(c.price.toLocaleString()+' BB'+(acct.bits<c.price?' · need '+(c.price-acct.bits).toLocaleString()+' more':''))}</div><small style="color:${c.season?'#b06a00':c.custom?'#6b4bd6':'var(--muted)'};font-size:10px;font-weight:${c.season||c.custom?800:600}">${c.season?seasonLabel(c.season):(c.cat==='head'?'Head':c.cat==='body'?'Body':'Legs')+(c.custom?' · by '+esc(c.author||'a player'):'')}</small>${c.custom?`<span class="cuActs"><span data-a="share">🔗</span><span data-a="del">${c.mine?'🗑':'✖'}</span></span>${c.sold?`<small style="display:block;color:var(--muted);font-size:10px">${c.sold} sold</small>`:''}`:''}`; if(c.season) b.style.borderColor='#ff8c42'; if(c.custom){ b.style.borderColor='#8c6cff'; b.querySelector('[data-a=share]').onclick=e=>{ e.stopPropagation(); const x=customItem(c.id); shareLinkBox('🔗 Share "'+x.name+'"',location.origin+location.pathname+'#item='+customEncode(x),'Anyone who opens this link gets your item in their Avatar shop.'); }; b.querySelector('[data-a=del]').onclick=e=>{ e.stopPropagation(); if(!confirm((c.mine?'Delete your item "':'Remove "')+c.name+'"?')) return; customSave(customList().filter(y=>y.id!==c.id)); if(c.mine&&authToken){ fetch(SERVER_HTTP+'/items',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,action:'delete',id:c.id})}).catch(()=>{}); } SHOP_ITEMS=SHOP_ITEMS.filter(y=>y.id!==c.id); for(const k of ['head','body','legs']) if(acct.wear[k]===c.id) acct.wear[k]=k==='head'?'cap':k==='body'?'shirt':'pants'; renderCatalog(); drawPreview(); drawMini(); }; }
+    b.onclick=()=>{ if(!owned){ if(acct.bits<c.price){ toast('Not enough Blockbux',`${c.price-acct.bits} more needed`); return; } acct.bits-=c.price; acct.items.add(c.id); fmtBits(); toast(`${c.emoji} Bought ${c.name}!`,c.custom&&c.author?c.price+' Blockbux go to '+esc(c.author):'tap it again to wear'); if(c.custom&&c.author&&c.price>0) sendPayout({author:c.author,name:'Avatar item: '+c.name},c.price); renderCatalog(); return; }
       acct.wear[c.cat]=c.id; renderCatalog(); drawPreview(); drawMini(); }; grid.appendChild(b); } }
 document.getElementById('catSearch').addEventListener('input',renderCatalog);
 document.querySelectorAll('.cattabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.cattabs button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); catFilter=b.dataset.c; renderCatalog(); });
@@ -803,8 +821,30 @@ function buildAvatar(){ const g=new THREE.Group(); const skin=0xf1c9a5, shirt=CO
     case 'ninjal': part(.72,.3,.72,0xff4b3a,-.4,-.9,0); part(.72,.3,.72,0xff4b3a,.4,-.9,0); break;
     case 'rocket': part(.8,.6,.9,metal,-.4,-.85,0); part(.8,.6,.9,metal,.4,-.85,0); part(.35,.4,.35,0xff8c42,-.4,-1.3,.2); part(.35,.4,.35,0xff8c42,.4,-1.3,.2); break;
   }
-  if(!headless){ part(.2,.25,.05,0x1d2433,-.3,2.75,-.62); part(.2,.25,.05,0x1d2433,.3,2.75,-.62); part(.5,.1,.05,0x1d2433,0,2.35,-.62); } return g; }
+  if(!headless){ part(.2,.25,.05,0x1d2433,-.3,2.75,-.62); part(.2,.25,.05,0x1d2433,.3,2.75,-.62); part(.5,.1,.05,0x1d2433,0,2.35,-.62); }
+  for(const slot of ['head','body','legs']){ const cu=customItem(W[slot]); if(cu) for(const q of cu.parts) part(q[0],q[1],q[2],q[3],q[4],q[5],q[6]); } // items made in Blockverse Avatar Creator
+  return g; }
 
+// ---------- Community avatar items (made in Blockverse Avatar Creator) ----------
+const CUSTOM_KEY='bv_custom_items';
+function customList(){ try{ const a=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]'); return Array.isArray(a)?a.filter(x=>x&&x.id&&Array.isArray(x.parts)):[]; }catch{ return []; } }
+function customSave(list){ try{ localStorage.setItem(CUSTOM_KEY,JSON.stringify(list.slice(0,80))); }catch{} }
+let SHOP_ITEMS=[];   // items from the server's community shop (shared with everyone)
+function customAll(){ const local=customList(); const seen=new Set(local.map(x=>x.id)); const key=x=>(x.author||'').toLowerCase()+'|'+x.name.toLowerCase(); const lk=new Set(local.map(key)); return [...local,...SHOP_ITEMS.filter(x=>!seen.has(x.id)&&!lk.has(key(x)))]; }
+function customItem(id){ if(!id||String(id).slice(0,2)!=='u_') return null; return customList().find(x=>x.id===id)||SHOP_ITEMS.find(x=>x.id===id)||null; }
+async function shopRefresh(){ if(!ONLINE_URL) return; try{ const r=await fetch(SERVER_HTTP+'/items',{cache:'no-store'}); if(!r.ok) return; const d=await r.json(); SHOP_ITEMS=Array.isArray(d.items)?d.items:[]; await shopUploadMine(); renderCatalog(); drawPreview(); drawMini(); }catch{} }
+// items I made on this device (or opened from my own link) get published to the shared shop once I'm signed in
+async function shopUploadMine(){ if(!authToken) return; const list=customList(); let changed=false; for(const x of list){ if(!customIsMine(x)||x.synced) continue;
+    try{ const r=await fetch(SERVER_HTTP+'/items',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:authToken,item:{name:x.name,cat:x.cat,price:x.price,parts:x.parts}})}); const d=await r.json(); if(r.ok&&d.item){ for(const k of ['head','body','legs']) if(acct.wear[k]===x.id) acct.wear[k]=d.item.id; if(acct.items.has(x.id)){ acct.items.delete(x.id); } x.id=d.item.id; x.author=d.item.author; x.synced=true; x.mine=true; changed=true; SHOP_ITEMS=[d.item,...SHOP_ITEMS.filter(y=>y.id!==d.item.id)]; toast('✨ Published to the shop','"'+x.name+'" is now visible to everyone'); } }catch{} }
+  if(changed) customSave(list); }
+function customCatalog(){ return customAll().map(x=>({id:x.id,cat:x.cat,name:x.name,emoji:x.cat==='head'?'🎩':x.cat==='body'?'👕':'👖',price:x.price|0,tags:'community custom creator '+(x.author||'').toLowerCase(),custom:true,author:x.author||'',mine:customIsMine(x),sold:x.sold|0})); }
+function customIsMine(x){ if(x.mine) return true; const a=(x.author||'').toLowerCase(); return !!a&&(a===(acct.name||'').toLowerCase()||a===(localStorage.getItem('bvstudio:author')||'').toLowerCase()); }
+function customAdd(x){ const list=customList().filter(y=>!(y.name.toLowerCase()===String(x.name).toLowerCase()&&(y.author||'')===(x.author||''))); list.unshift(x); customSave(list); return x; }
+function customEncode(x){ return btoa(unescape(encodeURIComponent(JSON.stringify({n:x.name,a:x.author||'',c:x.cat,p:x.price|0,q:x.parts})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function customDecode(code){ const d=JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/'))))); const cat=['head','body','legs'].includes(d.c)?d.c:'head'; const parts=(d.q||[]).slice(0,600).map(q=>q.slice(0,7).map(Number)).filter(q=>q.length===7&&q.every(Number.isFinite)); return {id:'u_'+Math.abs(hashStr(JSON.stringify([d.n,d.a,parts.length]))).toString(36),name:String(d.n||'Item').slice(0,24),author:String(d.a||'').slice(0,20),cat,price:Math.max(0,Math.min(99999,d.p|0)),parts,created:Date.now()}; }
+function hashStr(t){ let h=0; for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0; } return h; }
+setTimeout(shopRefresh,1500);
+(function customImportFromHash(){ const m=location.hash.match(/^#item=([A-Za-z0-9_-]+)/); if(!m) return; try{ const x=customDecode(m[1]); customAdd(x); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ renderCatalog(); toast('✨ New avatar item','"'+x.name+'" is in the Avatar shop under Community'); },500); }catch(e){ console.warn('bad item link',e); } })();
 // avatar preview (separate small renderer)
 const prevCanvas=document.getElementById('prev'); const prevR=new THREE.WebGLRenderer({canvas:prevCanvas,antialias:true}); prevR.setClearColor(0x8fd3ff);
 const prevScene=new THREE.Scene(); prevScene.add(new THREE.HemisphereLight(0xffffff,0x6b8f4a,.9)); const pl=new THREE.DirectionalLight(0xffffff,.7); pl.position.set(3,6,5); prevScene.add(pl);
@@ -949,6 +989,12 @@ function studioIsMine(w){ if(w.mine) return true; const a=(w.author||'').toLower
 function studioAsGame(w){ const c=STUDIO_CATS[w.cat]?.c||'solo'; return {name:w.name,desc:(w.author||'')+' studio '+(STUDIO_CATS[w.cat]?.n||''),tags:'studio custom made '+(w.online?'online':''),cats:c+' studio'+(w.online?' online':'')}; }
 document.getElementById('swImport').onclick=e=>{ e.preventDefault(); const i=document.createElement('input'); i.type='file'; i.accept='.bvw,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-world') throw 0; studioAdd({id:'w'+Date.now().toString(36),name:(d.name||'World').slice(0,24),author:(d.author||'').slice(0,20),cat:d.cat||'solo',online:!!d.online,ground:d.ground||48,blocks:d.blocks,pays:d.pays||[],shops:d.shops||[],created:Date.now()}); renderGrid(); toast('🧱 Imported','"'+d.name+'" is in your games'); }).catch(()=>toast('Could not import','That doesn\'t look like a Blockverse world file')); }; i.click(); };
 let STUDIO_PAYS=[], payPromptOpen=false, studioSolids=[]; const camRay={rc:new THREE.Raycaster(),head:new THREE.Vector3(),dir:new THREE.Vector3(),cur:11};
+function shareLinkBox(title,link,sub){ sheet.innerHTML=`<h3>${esc(title)}</h3><div class="sub">${sub}</div>
+    <input id="shLink" readonly value="${link.replace(/"/g,'&quot;')}" style="width:100%;font:inherit;font-weight:700;font-size:12px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text">
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="buy" id="shCopy" style="flex:1">📋 Copy link</button>${navigator.share?'<button class="buy" id="shSend" style="flex:1;background:#fff">📤 Send…</button>':''}</div><div class="sub" id="shMsg" style="margin-top:8px;min-height:18px"></div><button class="cancel" id="shClose">Close</button>`;
+  const inp=sheet.querySelector('#shLink'), msg=sheet.querySelector('#shMsg'); inp.onclick=()=>inp.select();
+  sheet.querySelector('#shCopy').onclick=()=>{ inp.select(); let ok=false; try{ ok=document.execCommand('copy'); }catch{} if(navigator.clipboard) navigator.clipboard.writeText(link).then(()=>{ msg.textContent='✅ Copied!'; }).catch(()=>{ msg.textContent=ok?'✅ Copied!':'Tap the link, then copy it.'; }); else msg.textContent=ok?'✅ Copied!':'Tap the link, then copy it.'; };
+  const snd=sheet.querySelector('#shSend'); if(snd) snd.onclick=()=>{ navigator.share({title,url:link}).catch(()=>{}); }; sheet.querySelector('#shClose').onclick=closeModal; modal.classList.add('show'); }
 function shareStudio(w){ const link=studioShareLink(w);
   sheet.innerHTML=`<h3>🔗 Share "${esc(w.name)}"</h3><div class="sub">Anyone who opens this link gets your game in their Blockverse. It's long because the whole world is inside it.</div>
     <input id="shLink" readonly value="${link.replace(/"/g,'&quot;')}" style="width:100%;font:inherit;font-weight:700;font-size:12px;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text">

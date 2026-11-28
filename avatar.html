@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2433">
+<title>Blockverse Avatar Creator</title>
+<style>
+  :root{--ink:#1d2433;--bg:#f3f5f9;--card:#fff;--sky:#8fd3ff;--sun:#ffb039;--mint:#3ad39a;--lava:#ff4b3a;--coin:#ffd23f;--muted:#6b7385;--violet:#8c6cff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);font-family:"Trebuchet MS",Verdana,sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:none}
+  button{font:inherit;color:inherit;cursor:pointer}
+  input{user-select:text;-webkit-user-select:text;touch-action:auto;font:inherit;font-size:16px}
+  #app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:1fr 264px;height:100%}
+  header{grid-column:1/3;background:var(--ink);color:#fff;display:flex;align-items:center;gap:8px;padding:0 12px}
+  header h1{font-size:17px;font-weight:900} header h1 span{color:#ff7ab8} header h1 small{font-size:10px;color:#8fd3ff;font-weight:700}
+  header .sp{flex:1}
+  header input{font-weight:800;background:#2f3850;color:#fff;border:0;border-radius:999px;padding:6px 12px;width:170px;outline:0;font-size:14px}
+  .hb{background:#2f3850;border:0;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px;color:#fff}
+  .hb.go{background:var(--sun);color:var(--ink)}
+  #view{position:relative;background:linear-gradient(#bfe6ff,#e9f6ff)}
+  canvas{display:block}
+  #hud{position:absolute;left:10px;bottom:10px;background:#ffffffd9;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:700;box-shadow:0 3px 0 var(--ink);pointer-events:none}
+  #toast{position:absolute;top:10px;left:50%;transform:translateX(-50%) translateY(-70px);background:var(--ink);color:#fff;border-radius:999px;padding:8px 14px;font-weight:800;font-size:13px;transition:transform .2s;pointer-events:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+  #toast.show{transform:translateX(-50%)}
+  aside{background:var(--card);border-left:3px solid var(--ink);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+  .panel{background:var(--bg);border:3px solid var(--ink);border-radius:14px;padding:10px;box-shadow:0 3px 0 var(--ink)}
+  .lbl{font-weight:900;font-size:13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center} .lbl small{color:var(--muted);font-weight:700;font-size:11px}
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px} .seg.four{grid-template-columns:repeat(4,1fr)}
+  .seg button,.row button,.presets button{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:7px 4px;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--ink)}
+  .seg button.on{background:var(--sun)} .seg button:active,.row button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+  .pal{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+  .pal button{aspect-ratio:1;border:3px solid var(--ink);border-radius:8px;box-shadow:0 2px 0 var(--ink);padding:0}
+  .pal button.on{outline:3px solid var(--sun);outline-offset:2px}
+  .row{display:flex;gap:6px;align-items:center} .row button{flex:1} .row button.on{background:var(--mint)} .row button.warn{background:#ffe4e1} .row button.go{background:var(--mint)}
+  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px} .presets button{display:flex;flex-direction:column;align-items:center;font-size:11px} .presets button b{font-size:20px}
+  .fld{display:block;font-size:12px;font-weight:800;margin-top:8px} .fld input{display:block;width:100%;margin-top:4px;font-weight:800;padding:7px 9px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);outline:0}
+  .stepper{display:flex;align-items:center;gap:6px;margin-top:4px} .stepper button{width:38px;height:38px;border:3px solid var(--ink);border-radius:10px;background:#fff;font-weight:900;font-size:18px;box-shadow:0 2px 0 var(--ink);flex:none} .stepper input{flex:1;min-width:0;text-align:center;font-weight:900;padding:7px 4px;border:3px solid var(--ink);border-radius:10px}
+  .help{font-size:11px;color:var(--muted);font-weight:700;line-height:1.5}
+  #pub{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1d2433aa;padding:16px;z-index:40} #pub.show{display:flex}
+  .pubCard{background:var(--card);border:4px solid var(--ink);border-radius:18px;padding:18px;width:min(420px,100%);box-shadow:0 8px 0 var(--ink)} .pubCard h2{font-size:20px;font-weight:900;margin-bottom:6px}
+  .pubSub{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4;margin-bottom:8px} .pubOk{font-weight:900;font-size:16px;color:#157a56;margin:10px 0 6px}
+  #pubLink{width:100%;font-weight:700;font-size:12px;padding:8px 10px;border:3px solid var(--ink);border-radius:10px}
+  #fab,#scrim{display:none}
+  @media(max-width:900px),(pointer:coarse){
+    #app{grid-template-columns:1fr}
+    header h1{font-size:14px} header input{width:96px;padding:5px 9px} .hb{padding:5px 9px;font-size:12px}
+    aside{position:fixed;top:52px;right:0;bottom:0;width:min(280px,86vw);z-index:25;transform:translateX(100%);transition:transform .22s ease;box-shadow:-6px 0 0 #1d243322}
+    aside.open{transform:translateX(0)}
+    #scrim{position:fixed;inset:0;top:52px;z-index:23} aside.open~#scrim{display:block}
+    #fab{display:flex;flex-direction:column;align-items:center;justify-content:center;position:fixed;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:24;width:62px;height:62px;border-radius:50%;background:var(--sun);border:4px solid var(--ink);box-shadow:0 4px 0 var(--ink);font-size:24px;line-height:1}
+    #fab small{font-size:9px;font-weight:900} aside.open~#fab{display:none}
+    #quick{display:flex!important}
+  }
+  #quick{display:none;position:absolute;left:10px;top:10px;gap:6px} #quick button{width:44px;height:44px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);font-size:17px;font-weight:900} #quick button.on{background:var(--sun)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Avatar <span>Creator</span> <small>v2</small></h1>
+    <input id="iname" value="My Item" maxlength="24" spellcheck="false">
+    <div class="sp"></div>
+    <button class="hb" id="bNew">New</button>
+    <button class="hb" id="bOpen">Open</button>
+    <button class="hb" id="bSave">Save</button>
+    <button class="hb go" id="bPublish">🚀 Publish</button>
+  </header>
+  <div id="view">
+    <div id="quick"><button data-t="add" class="on">+</button><button data-t="erase">−</button><button data-t="paint">🖌</button></div>
+    <div id="hud">0 blocks</div>
+    <div id="toast"></div>
+    <div id="pub"><div class="pubCard"><h2>🚀 Publish to the Avatar shop</h2><div class="pubSub">Your item appears under <b>Avatar → ✨ Community</b> in Blockverse. Players who buy it pay you the Blockbux.</div>
+      <label class="fld">Item name<input id="pubName" maxlength="24"></label><label class="fld">Creator name<input id="pubAuthor" maxlength="20" placeholder="your Blockverse username"></label>
+      <div class="row" style="margin-top:12px"><button id="pubGo" class="go">Publish</button><button id="pubCancel">Cancel</button></div>
+      <div id="pubDone" style="display:none"><div class="pubOk">✅ Published!</div><input id="pubLink" readonly><div class="row" style="margin-top:8px"><button id="pubCopy">📋 Copy link</button><button id="pubPlay" class="go">▶ Open Blockverse</button></div></div></div></div>
+  </div>
+  <aside>
+    <div class="panel"><div class="lbl">Item type</div><div class="seg" id="slot"><button data-s="head" class="on">🎩 Head</button><button data-s="body">👕 Body</button><button data-s="legs">👖 Legs</button></div></div>
+    <div class="panel"><div class="lbl">Tools <small>1–4</small></div><div class="seg four" id="tools"><button data-t="add" class="on">Add</button><button data-t="erase">Erase</button><button data-t="paint">Paint</button><button data-t="pick">Pick</button></div>
+      <div class="row" style="margin-top:8px"><button id="bMirror" class="on">⇆ Mirror: ON</button><button id="bUndo">↶</button><button id="bRedo">↷</button></div></div>
+    <div class="panel"><div class="lbl">Colour <input type="color" id="colorPick" value="#ff4b3a" style="width:44px;height:28px;border:3px solid var(--ink);border-radius:8px;padding:0;background:#fff"></div><div class="pal" id="pal"></div></div>
+    <div class="panel"><div class="lbl">Start from <small>replaces your blocks</small></div><div class="presets" id="presets"></div></div>
+    <div class="panel"><div class="lbl">💰 Price <small>Blockbux</small></div><div class="stepper"><button data-d="-10">−</button><input type="number" inputmode="numeric" id="price" min="0" max="99999" value="50"><button data-d="10">+</button></div>
+      <div class="help" style="margin-top:6px">0 = free. You always own your own items.</div></div>
+    <div class="panel"><div class="lbl">Controls</div><div class="help">Drag: turn the avatar · scroll / pinch: zoom · 2 fingers: move<br>Click the avatar or a block to add next to it. Right-click erases.<br>Ctrl+Z / Ctrl+Y undo & redo · Ctrl+S save (.bvi)</div>
+      <div class="row" style="margin-top:8px"><button id="bClear" class="warn">Clear</button><button id="bShot">📷 Snapshot</button></div></div>
+  </aside>
+  <div id="scrim"></div><button id="fab">🎨<small>Tools</small></button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const V=0.2;                       // voxel size (avatar head is 1.2 wide = 6 voxels)
+const MAXV=600;
+const COLORS=[0xff4b3a,0xff8c42,0xffd23f,0x3ad39a,0x2f8f4e,0x4aa8ff,0x8c6cff,0xff7ab8,0xffffff,0xb7c0d1,0x6b7385,0x1d2433,0x8b5a2b,0xc98b4a,0xf1c9a5,0x1fa9b5];
+const vox=new Map();               // "i,j,k" -> color int
+const key=(i,j,k)=>i+','+j+','+k;
+let tool='add', color=COLORS[0], slot='head', mirror=true, dirty=false;
+const undoS=[], redoS=[]; let pending=null;
+
+// ---------- three ----------
+const view=$('view'); const TOUCH=matchMedia('(pointer:coarse)').matches;
+const renderer=new THREE.WebGLRenderer({antialias:!TOUCH,alpha:true,preserveDrawingBuffer:true}); renderer.setPixelRatio(TOUCH?1.5:Math.min(devicePixelRatio,2)); view.prepend(renderer.domElement);
+const scene=new THREE.Scene(); const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+scene.add(new THREE.HemisphereLight(0xffffff,0x8090a8,.95)); const dl=new THREE.DirectionalLight(0xffffff,.7); dl.position.set(-3,6,-6); scene.add(dl);
+const orbit={yaw:Math.PI+.5,pitch:.15,dist:9,target:new THREE.Vector3(0,1.9,0)};
+const SLOT_TARGET={head:[0,2.9,6.5],body:[0,1.3,8],legs:[0,0,8]};
+
+// mannequin — same proportions as the in-game avatar (front faces -z)
+const man=new THREE.Group(); scene.add(man); const manMeshes=[];
+function mpart(w,h,d,c,x,y,z,zone){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:c})); m.position.set(x,y,z); m.userData.man=true; m.userData.zone=zone; man.add(m); manMeshes.push(m); return m; }
+mpart(1.2,1.2,1.2,0xf1c9a5,0,2.6,0,'head'); mpart(1.6,1.6,.9,0x9fb4d6,0,1.2,0,'body'); mpart(.6,1.5,.6,0x9fb4d6,-1.1,1.25,0,'body'); mpart(.6,1.5,.6,0x9fb4d6,1.1,1.25,0,'body'); mpart(.7,1.4,.7,0x5b6b8c,-.4,-.4,0,'legs'); mpart(.7,1.4,.7,0x5b6b8c,.4,-.4,0,'legs');
+{ const f=new THREE.MeshBasicMaterial({color:0x1d2433}); for(const [w,h,x,y] of [[.2,.25,-.3,2.75],[.2,.25,.3,2.75],[.5,.1,0,2.35]]){ const e=new THREE.Mesh(new THREE.BoxGeometry(w,h,.05),f); e.position.set(x,y,-.62); man.add(e); } }
+const floor=new THREE.Mesh(new THREE.CircleGeometry(3,40),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6})); floor.rotation.x=-Math.PI/2; floor.position.y=-1.11; scene.add(floor);
+
+// voxels (few hundred at most → plain meshes are fine)
+const vgroup=new THREE.Group(); scene.add(vgroup); const vgeo=new THREE.BoxGeometry(V,V,V); const vmeshes=new Map(); const matCache=new Map();
+const vmat=c=>{ if(!matCache.has(c)) matCache.set(c,new THREE.MeshLambertMaterial({color:c})); return matCache.get(c); };
+const center=(i,j,k)=>[(i+.5)*V,(j+.5)*V,(k+.5)*V];
+function setV(i,j,k,c,record=true){ const kk=key(i,j,k); const prev=vox.has(kk)?vox.get(kk):null; if(prev===c) return; if(c!==null&&prev===null&&vox.size>=MAXV){ toast('That\'s the limit ('+MAXV+' blocks)'); return; }
+  if(Math.abs(i)>12||j<-8||j>26||Math.abs(k)>10) return;
+  if(record&&pending) pending.push([i,j,k,prev,c]);
+  if(vmeshes.has(kk)){ vgroup.remove(vmeshes.get(kk)); vmeshes.delete(kk); }
+  if(c===null) vox.delete(kk); else { vox.set(kk,c); const m=new THREE.Mesh(vgeo,vmat(c)); const [x,y,z]=center(i,j,k); m.position.set(x,y,z); m.userData.cell=[i,j,k]; vgroup.add(m); vmeshes.set(kk,m); }
+  dirty=true; }
+function place(i,j,k,c){ setV(i,j,k,c); if(mirror){ setV(-i-1,j,k,c); } }
+const begin=()=>{ pending=[]; }; const commit=()=>{ if(pending&&pending.length){ undoS.push(pending); if(undoS.length>200) undoS.shift(); redoS.length=0; } pending=null; hud(); };
+function undo(){ const a=undoS.pop(); if(!a) return; for(let n=a.length-1;n>=0;n--){ const [i,j,k,p]=a[n]; setV(i,j,k,p,false); } redoS.push(a); hud(); }
+function redo(){ const a=redoS.pop(); if(!a) return; for(const [i,j,k,,c] of a) setV(i,j,k,c,false); undoS.push(a); hud(); }
+
+const ghost=new THREE.Mesh(vgeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthWrite:false})); ghost.visible=false; scene.add(ghost);
+const ray=new THREE.Raycaster(), ptr=new THREE.Vector2();
+function hit(cx,cy){ const r=renderer.domElement.getBoundingClientRect(); ptr.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); return ray.intersectObjects([...manMeshes,...vgroup.children])[0]||null; }
+function cellOf(h,adjacent){ if(h.object.userData.cell){ const c=h.object.userData.cell.slice(); if(adjacent){ const n=h.face.normal; c[0]+=Math.round(n.x); c[1]+=Math.round(n.y); c[2]+=Math.round(n.z); } return c; }
+  const n=h.face.normal, p=h.point.clone().addScaledVector(n,V*.5); return [Math.floor(p.x/V),Math.floor(p.y/V),Math.floor(p.z/V)]; }
+function apply(h,t){ if(!h) return; if(t==='add'){ const [i,j,k]=cellOf(h,true); place(i,j,k,color); }
+  else if(h.object.userData.cell){ const [i,j,k]=h.object.userData.cell; if(t==='erase') place(i,j,k,null); else if(t==='paint'){ if(vox.has(key(i,j,k))) setV(i,j,k,color); if(mirror&&vox.has(key(-i-1,j,k))) setV(-i-1,j,k,color); } else if(t==='pick'){ color=vox.get(key(i,j,k)); renderPal(); setTool('add'); } } }
+
+// ---------- input ----------
+const cv=renderer.domElement; let drag=null, moved=false, tDist=0, tMid=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); moved=false; drag={x:e.clientX,y:e.clientY,b:e.button}; });
+cv.addEventListener('pointermove',e=>{ if(drag){ const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(Math.hypot(dx,dy)>5) moved=true; if(moved){ orbit.yaw-=dx*.008; orbit.pitch=Math.max(-.9,Math.min(1.3,orbit.pitch+dy*.008)); drag.x=e.clientX; drag.y=e.clientY; } if(e.pointerType==='touch') return; }
+  const h=hit(e.clientX,e.clientY); if(h&&(tool==='add'||h.object.userData.cell)){ const [i,j,k]=cellOf(h,tool==='add'); const [x,y,z]=center(i,j,k); ghost.position.set(x,y,z); ghost.material.color.set(tool==='erase'?0xff4b3a:color); ghost.scale.setScalar(1.06); ghost.visible=true; } else ghost.visible=false; });
+cv.addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null; if(moved) return; const h=hit(e.clientX,e.clientY); begin(); apply(h,d.b===2?'erase':d.b===1?'pick':tool); commit(); });
+cv.addEventListener('wheel',e=>{ e.preventDefault(); orbit.dist=Math.max(3,Math.min(18,orbit.dist*(1+Math.sign(e.deltaY)*.1))); },{passive:false});
+cv.addEventListener('touchmove',e=>{ if(e.touches.length===2){ const [a,b]=e.touches; const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), my=(a.clientY+b.clientY)/2; if(tDist) orbit.dist=Math.max(3,Math.min(18,orbit.dist*(tDist/d))); if(tMid!==null) orbit.target.y=Math.max(-.6,Math.min(3.6,orbit.target.y+(my-tMid)*.01)); tDist=d; tMid=my; drag=null; ghost.visible=false; } },{passive:true});
+cv.addEventListener('touchend',e=>{ if(e.touches.length<2){ tDist=0; tMid=null; } });
+addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return; const k=e.key.toLowerCase(); if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; } if((e.ctrlKey||e.metaKey)&&k==='y'){ e.preventDefault(); redo(); return; } if((e.ctrlKey||e.metaKey)&&k==='s'){ e.preventDefault(); save(); return; }
+  if(k==='1') setTool('add'); if(k==='2') setTool('erase'); if(k==='3') setTool('paint'); if(k==='4') setTool('pick'); if(k==='m') $('bMirror').click(); });
+
+// ---------- UI ----------
+function setTool(t){ tool=t; document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); }
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTool(b.dataset.t));
+function setSlot(s){ slot=s; document.querySelectorAll('#slot button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); const [x,y,d]=SLOT_TARGET[s]; orbit.target.set(x,y,0); orbit.dist=d; for(const m of manMeshes){ m.material.transparent=true; m.material.opacity=m.userData.zone===s?1:.35; } renderPresets(); }
+document.querySelectorAll('#slot button').forEach(b=>b.onclick=()=>setSlot(b.dataset.s));
+$('bMirror').onclick=()=>{ mirror=!mirror; $('bMirror').classList.toggle('on',mirror); $('bMirror').textContent='⇆ Mirror: '+(mirror?'ON':'OFF'); };
+$('bUndo').onclick=undo; $('bRedo').onclick=redo;
+function renderPal(){ const el=$('pal'); el.innerHTML=''; for(const c of COLORS){ const b=document.createElement('button'); b.style.background='#'+c.toString(16).padStart(6,'0'); b.className=c===color?'on':''; b.onclick=()=>{ color=c; renderPal(); if(tool==='erase'||tool==='pick') setTool('add'); }; el.appendChild(b); } $('colorPick').value='#'+color.toString(16).padStart(6,'0'); }
+$('colorPick').oninput=e=>{ color=parseInt(e.target.value.slice(1),16); renderPal(); };
+document.querySelectorAll('.stepper button').forEach(b=>b.onclick=()=>{ const el=$('price'); el.value=Math.max(0,Math.min(99999,(+el.value||0)+(+b.dataset.d))); dirty=true; });
+function hud(){ $('hud').textContent=vox.size+' / '+MAXV+' blocks'+(dirty?' · unsaved':''); }
+let toastT; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2000); }
+
+// ---------- presets ----------
+function fill(o,i0,j0,k0,i1,j1,k1,c,hollow){ for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++)for(let k=k0;k<=k1;k++){ if(hollow&&i>i0&&i<i1&&k>k0&&k<k1&&j<j1) continue; o.push([i,j,k,c]); } return o; }
+const PRESETS={ head:[
+  {n:'Cap',e:'🧢',f:()=>{ let o=fill([],-3,16,-3,2,17,2,0x4aa8ff); fill(o,-3,16,-6,2,16,-4,0x4aa8ff); o.push([-1,18,-1,0xffffff],[0,18,-1,0xffffff],[-1,18,0,0xffffff],[0,18,0,0xffffff]); return o; }},
+  {n:'Crown',e:'👑',f:()=>{ let o=fill([],-4,16,-4,3,16,3,0xffd23f,true); for(const [i,k] of [[-4,-4],[3,-4],[-4,3],[3,3],[-1,-4],[0,-4],[-1,3],[0,3],[-4,-1],[-4,0],[3,-1],[3,0]]) o.push([i,17,k,0xffd23f],[i,18,k,0xffd23f]); o.push([-1,17,-5,0xff4b3a],[0,17,-5,0xff4b3a]); return o; }},
+  {n:'Cat ears',e:'🐱',f:()=>{ let o=[]; for(const s of [-3,2]){ o.push([s,16,-1,0x1d2433],[s,16,0,0x1d2433],[s,17,-1,0x1d2433],[s,17,0,0x1d2433],[s,18,0,0x1d2433],[s,17,-2,0xff7ab8]); } return o; }},
+  {n:'Top hat',e:'🎩',f:()=>{ let o=fill([],-4,16,-4,3,16,3,0x1d2433); fill(o,-3,17,-3,2,21,2,0x1d2433); fill(o,-3,17,-3,2,17,2,0xff4b3a,true); return o; }},
+  {n:'Horns',e:'😈',f:()=>{ let o=[]; for(const s of [-3,2]){ o.push([s,16,0,0xff4b3a],[s,17,0,0xff4b3a],[s,18,0,0xff4b3a],[s,19,-1,0xff4b3a]); } return o; }},
+  {n:'Glasses',e:'🕶',f:()=>{ let o=[]; for(let i=-3;i<=2;i++) o.push([i,13,-4,0x1d2433]); for(const i of [-3,-2,1,2]) o.push([i,12,-4,0x1d2433]); o.push([-4,13,-3,0x1d2433],[3,13,-3,0x1d2433]); return o; }} ],
+ body:[
+  {n:'Backpack',e:'🎒',f:()=>{ let o=fill([],-3,3,3,2,8,5,0xff8c42); fill(o,-2,4,6,1,6,6,0xffd23f); return o; }},
+  {n:'Cape',e:'🦸',f:()=>{ let o=fill([],-4,0,3,3,9,3,0xff4b3a); o.push([-4,9,2,0xffd23f],[3,9,2,0xffd23f]); return o; }},
+  {n:'Wings',e:'🪽',f:()=>{ let o=[]; for(const s of [1,-1]){ for(let n=0;n<5;n++){ const i=s>0?4+n:-5-n; for(let j=5-n;j<=9-Math.floor(n/2);j++) o.push([i,j,3,0xffffff]); } } return o; }},
+  {n:'Tie',e:'👔',f:()=>{ let o=[]; for(let j=4;j<=9;j++) o.push([-1,j,-3,0xff4b3a],[0,j,-3,0xff4b3a]); o.push([-1,3,-3,0xff4b3a]); return o; }},
+  {n:'Armor',e:'🛡',f:()=>{ let o=fill([],-4,6,-3,3,9,-3,0xb7c0d1); fill(o,-5,9,-3,-5,10,2,0xb7c0d1); fill(o,4,9,-3,4,10,2,0xb7c0d1); o.push([-1,7,-4,0xffd23f],[0,7,-4,0xffd23f]); return o; }},
+  {n:'Badge',e:'⭐',f:()=>[[1,8,-3,0xffd23f],[2,8,-3,0xffd23f],[1,7,-3,0xffd23f],[2,7,-3,0xffd23f]]} ],
+ legs:[
+  {n:'Boots',e:'🥾',f:()=>{ let o=[]; for(const i0 of [-4,0]){ fill(o,i0,-6,-2,i0+3,-4,1,0x8b5a2b,false); fill(o,i0,-6,-3,i0+3,-6,-3,0x8b5a2b); } return o; }},
+  {n:'Belt',e:'🪢',f:()=>{ let o=fill([],-4,1,-3,3,1,2,0x1d2433,true); o.push([-1,1,-3,0xffd23f],[0,1,-3,0xffd23f]); return o; }},
+  {n:'Kneepads',e:'🛼',f:()=>{ let o=[]; for(const i0 of [-4,0]) fill(o,i0,-3,-2,i0+3,-2,-2,0x6b7385); return o; }},
+  {n:'Tail',e:'🦊',f:()=>{ let o=[]; for(let n=0;n<5;n++) o.push([-1,1+Math.floor(n/2),2+n,0xff8c42],[0,1+Math.floor(n/2),2+n,0xff8c42]); o.push([-1,3,7,0xffffff],[0,3,7,0xffffff]); return o; }},
+  {n:'Rockets',e:'🚀',f:()=>{ let o=[]; for(const i0 of [-4,0]){ fill(o,i0,-6,2,i0+3,-3,3,0xb7c0d1); o.push([i0+1,-7,2,0xff8c42],[i0+2,-7,2,0xff8c42]); } return o; }},
+  {n:'Stripes',e:'🦓',f:()=>{ let o=[]; for(const i0 of [-4,0]) for(const j of [-5,-2,1]) fill(o,i0,j,-2,i0+3,j,-2,0xffffff); return o; }} ] };
+function renderPresets(){ const el=$('presets'); el.innerHTML=''; for(const p of PRESETS[slot]){ const b=document.createElement('button'); b.innerHTML=`<b>${p.e}</b>${p.n}`; b.onclick=()=>{ if(vox.size&&!confirm('Replace your current blocks with "'+p.n+'"?')) return; begin(); for(const kk of [...vox.keys()]){ const [i,j,k]=kk.split(',').map(Number); setV(i,j,k,null); } for(const [i,j,k,c] of p.f()) setV(i,j,k,c); commit(); if($('iname').value==='My Item') $('iname').value=p.n; toast('Loaded '+p.n+' — now make it yours'); closeDrawer(); }; el.appendChild(b); } }
+
+// ---------- export: voxels -> avatar "parts" [w,h,d,color,x,y,z], merging runs along x ----------
+function toParts(){ const rows=new Map(); for(const [kk,c] of vox){ const [i,j,k]=kk.split(',').map(Number); const rk=j+','+k+','+c; (rows.get(rk)||rows.set(rk,[]).get(rk)).push(i); }
+  const parts=[]; const r=n=>Math.round(n*1000)/1000; for(const [rk,is] of rows){ const [j,k,c]=rk.split(',').map(Number); is.sort((a,b)=>a-b); let s=is[0], e=is[0]; const flush=()=>{ const n=e-s+1; parts.push([r(n*V),V,V,c,r((s+e+1)/2*V),r((j+.5)*V),r((k+.5)*V)]); }; for(let n=1;n<is.length;n++){ if(is[n]===e+1) e=is[n]; else { flush(); s=e=is[n]; } } flush(); } return parts; }
+function serialize(){ const blocks=[...vox].map(([kk,c])=>[...kk.split(',').map(Number),c]); return {format:'blockverse-item',version:1,name:$('iname').value.trim()||'My Item',author:localStorage.getItem('bvstudio:author')||'',cat:slot,price:Math.max(0,Math.min(99999,+$('price').value||0)),blocks}; }
+function load(d){ if(!d||d.format!=='blockverse-item'||!Array.isArray(d.blocks)) throw new Error('Not a Blockverse item file'); for(const kk of [...vox.keys()]){ const [i,j,k]=kk.split(',').map(Number); setV(i,j,k,null,false); } $('iname').value=d.name||'My Item'; $('price').value=d.price|0; setSlot(['head','body','legs'].includes(d.cat)?d.cat:'head'); for(const [i,j,k,c] of d.blocks) setV(i,j,k,c,false); undoS.length=redoS.length=0; dirty=false; hud(); toast('Opened '+(d.name||'item')); }
+function download(name,blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+function save(){ const d=serialize(); try{ localStorage.setItem('bvavatar:last',JSON.stringify(d)); }catch{} const data=JSON.stringify(d), fname=(d.name.replace(/[^a-z0-9 _-]/gi,'').trim()||'item')+'.bvi'; if(window.studio){ window.studio.saveAs(fname,data).then(ok=>{ if(ok){ dirty=false; hud(); toast('Saved'); } }); return; } download(fname,new Blob([data],{type:'application/json'})); dirty=false; hud(); toast('Saved '+fname); }
+$('bSave').onclick=save;
+$('bOpen').onclick=()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.bvi,.json'; i.onchange=()=>{ const f=i.files[0]; if(f) f.text().then(t=>load(JSON.parse(t))).catch(e=>toast('Could not open: '+e.message)); }; i.click(); };
+$('bNew').onclick=()=>{ if(vox.size&&!confirm('Start a new item? Unsaved changes will be lost.')) return; for(const kk of [...vox.keys()]){ const [i,j,k]=kk.split(',').map(Number); setV(i,j,k,null,false); } $('iname').value='My Item'; undoS.length=redoS.length=0; dirty=false; hud(); };
+$('bClear').onclick=()=>{ if(!vox.size||!confirm('Remove every block?')) return; begin(); for(const kk of [...vox.keys()]){ const [i,j,k]=kk.split(',').map(Number); setV(i,j,k,null); } commit(); };
+$('bShot').onclick=()=>{ ghost.visible=false; renderer.render(scene,camera); renderer.domElement.toBlob(b=>download(($('iname').value||'item')+'.png',b)); };
+if(window.studio){ window.studio.onOpen(d=>{ try{ load(JSON.parse(d)); }catch(e){ toast(e.message); } }); window.studio.onSave(()=>save()); }
+
+// ---------- publish ----------
+const GAME_URL=(location.protocol==='file:'||window.studio||/^capacitor|^https?:\/\/localhost/.test(location.href))?'https://kalyan-alt.github.io/blockverse-game/':location.href.replace(/avatar\.html.*$/,'');
+const hashStr=t=>{ let h=0; for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0; } return h; };
+const encode=x=>btoa(unescape(encodeURIComponent(JSON.stringify({n:x.name,a:x.author||'',c:x.cat,p:x.price|0,q:x.parts})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+$('bPublish').onclick=()=>{ if(!vox.size){ toast('Add some blocks first!'); return; } $('pubName').value=$('iname').value.trim()||'My Item'; $('pubAuthor').value=localStorage.getItem('bvstudio:author')||''; $('pubDone').style.display='none'; $('pubGo').style.display=''; $('pub').classList.add('show'); };
+$('pubCancel').onclick=()=>$('pub').classList.remove('show');
+$('pubGo').onclick=()=>{ const name=$('pubName').value.trim().slice(0,24)||'My Item', author=$('pubAuthor').value.trim().slice(0,20), price=Math.max(0,Math.min(99999,+$('price').value||0)); if(price>0&&!author){ toast('Add your creator name so buyers can pay you'); $('pubAuthor').focus(); return; }
+  $('iname').value=name; try{ localStorage.setItem('bvstudio:author',author); }catch{} const parts=toParts(); const item={id:'u_'+Math.abs(hashStr(JSON.stringify([name,author,parts.length]))).toString(36),name,author,cat:slot,price,parts,mine:true,created:Date.now()};
+  try{ const k='bv_custom_items'; const list=JSON.parse(localStorage.getItem(k)||'[]').filter(y=>!(String(y.name).toLowerCase()===name.toLowerCase()&&(y.author||'')===author)); list.unshift(item); localStorage.setItem(k,JSON.stringify(list.slice(0,80))); }catch{}
+  const link=GAME_URL+'#item='+encode(item); $('pubLink').value=link; $('pubGo').style.display='none'; $('pubDone').style.display='';
+  // signed in to Blockverse in this browser? publish to the shared shop right now so everyone sees it
+  try{ const tok=localStorage.getItem('bv_token'); if(tok&&location.protocol==='https:'){ fetch('https://blockverse-server-8enf.onrender.com/items',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:tok,item:{name,cat:slot,price,parts}})}).then(r=>r.json()).then(d=>{ if(d&&d.item){ toast('✨ Live in the shop for everyone'); try{ const k='bv_custom_items'; const list=JSON.parse(localStorage.getItem(k)||'[]'); const me=list.find(y=>y.id===item.id); if(me){ me.id=d.item.id; me.author=d.item.author; me.synced=true; localStorage.setItem(k,JSON.stringify(list)); } }catch{} } else if(d&&d.error) toast(d.error); }).catch(()=>{}); } }catch{}
+  $('pubPlay').onclick=()=>{ if(window.studio||GAME_URL.startsWith('https://kalyan-alt')&&location.protocol!=='https:') window.open(link,'_blank'); else location.href=link; };
+  $('pubCopy').onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>toast('Link copied'),()=>{ $('pubLink').select(); document.execCommand('copy'); toast('Link copied'); }); };
+  dirty=false; hud(); toast('Published "'+name+'" · '+parts.length+' parts'); };
+
+// ---------- mobile drawer ----------
+const aside=document.querySelector('aside'); const openDrawer=()=>aside.classList.add('open'); function closeDrawer(){ aside.classList.remove('open'); }
+$('fab').onclick=openDrawer; $('scrim').onclick=closeDrawer;
+let sw=null; addEventListener('touchstart',e=>{ const t=e.touches[0]; if(!t) return; if(!aside.classList.contains('open')&&innerWidth-t.clientX<26) sw={x:t.clientX,m:'o'}; else if(aside.classList.contains('open')&&aside.contains(e.target)&&!/INPUT|BUTTON/.test(e.target.tagName)) sw={x:t.clientX,m:'c'}; else sw=null; },{passive:true});
+addEventListener('touchmove',e=>{ if(!sw) return; const dx=e.touches[0].clientX-sw.x; if(sw.m==='o'&&dx<-40){ openDrawer(); sw=null; } else if(sw.m==='c'&&dx>50){ closeDrawer(); sw=null; } },{passive:true});
+setInterval(()=>{ if(dirty&&vox.size){ try{ localStorage.setItem('bvavatar:auto',JSON.stringify(serialize())); }catch{} } },15000);
+addEventListener('beforeunload',e=>{ if(dirty&&vox.size){ e.preventDefault(); e.returnValue=''; } });
+
+// ---------- loop ----------
+function resize(){ const w=view.clientWidth,h=view.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } addEventListener('resize',resize); resize();
+function loop(){ requestAnimationFrame(loop); const cp=Math.cos(orbit.pitch); camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*cp*orbit.dist,orbit.target.y+Math.sin(orbit.pitch)*orbit.dist,orbit.target.z+Math.cos(orbit.yaw)*cp*orbit.dist); camera.lookAt(orbit.target); renderer.render(scene,camera); }
+renderPal(); setSlot('head'); hud();
+try{ const a=localStorage.getItem('bvavatar:auto'); if(a&&JSON.parse(a).blocks.length&&confirm('Restore your last unsaved item?')) load(JSON.parse(a)); }catch{}
+loop(); setTimeout(()=>toast(TOUCH?'Tap the avatar to add blocks · 🎨 for tools':'Click the avatar to add blocks · right-click erases'),700);
+</script>
+</body>
+</html>
