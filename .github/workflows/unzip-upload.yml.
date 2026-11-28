@@ -1,0 +1,35 @@
+name: Unzip uploaded update
+# Upload any .zip to the top level of this repo and this unpacks it into the repo, then deletes the zip.
+on:
+  push:
+    branches: [main]
+    paths: ['*.zip']
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack zips
+        run: |
+          shopt -s nullglob
+          for z in *.zip; do
+            echo "Unpacking $z"
+            # workflow files can't be changed by this bot, so they are skipped (update those by hand)
+            unzip -o "$z" -x '.github/*' '__MACOSX/*'
+            # if the zip wrapped everything in a single folder, lift its contents up
+            top=$(unzip -Z1 "$z" | grep -v '^\.github/' | cut -d/ -f1 | sort -u)
+            if [ "$(echo "$top" | wc -l)" = "1" ] && [ -d "$top" ] && [ ! -f "$top/.keep-folder" ]; then
+              case "$top" in app|app-avatar|dist|dist-avatar|node_modules) ;; *) cp -r "$top"/. . && rm -rf "$top" ;; esac
+            fi
+            git rm -q --cached "$z" || true
+            rm -f "$z"
+          done
+      - name: Commit
+        run: |
+          git config user.name "blockverse-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "nothing to commit" || git commit -m "Unpack uploaded update"
+          git push
