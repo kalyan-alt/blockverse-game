@@ -338,7 +338,7 @@
 <!-- ============ HOME ============ -->
 <div id="home">
   <div id="topbar">
-    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v82</span></div>
+    <div class="logo">Blockverse<span id="conBadge">🎮 Console</span><span id="verTag" style="font-size:10px;font-weight:700;color:var(--muted);margin-left:8px;vertical-align:middle">v84</span></div>
     <button class="chip" id="chipBuy" style="border:0"><svg class="bux" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#ffd23f" stroke="#1d2433" stroke-width="2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="#b08600" stroke-width="1.5"/><path d="M12 6.5l4.5 2.6v5.2L12 16.9l-4.5-2.6V9.1z" fill="#ff8c42" stroke="#1d2433" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 6.5v10.4M7.5 9.1l4.5 2.6 4.5-2.6" fill="none" stroke="#1d2433" stroke-width="1.2"/></svg><span id="bitsTop">0</span><span style="opacity:.7;font-size:16px;line-height:1">+</span></button>
     <button id="avatarBtn" title="Account"><canvas id="avMini" width="72" height="72"></canvas></button>
   </div>
@@ -360,6 +360,7 @@
             <div class="sub" style="margin:4px 0 10px">Build avatar items block by block, set a Blockbux price, and publish them to the Avatar shop. You earn when players buy them.</div>
             <div class="dl">
               <a class="buy" href="avatar.html">▶ Open in browser</a>
+              <a class="dlbtn" href="#" id="bviImport">📂 Import .bvi</a>
               <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator-Setup.exe">⊞ Windows <small>.exe</small></a>
               <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator.dmg"> Mac <small>.dmg</small></a>
               <a class="dlbtn" href="https://github.com/kalyan-alt/blockverse-game/releases/latest/download/Blockverse-Avatar-Creator.AppImage">🐧 Linux <small>.AppImage</small></a>
@@ -843,6 +844,15 @@ function customAdd(x){ const list=customList().filter(y=>!(y.name.toLowerCase()=
 function customEncode(x){ return btoa(unescape(encodeURIComponent(JSON.stringify({n:x.name,a:x.author||'',c:x.cat,p:x.price|0,q:x.parts})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function customDecode(code){ const d=JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/'))))); const cat=['head','body','legs'].includes(d.c)?d.c:'head'; const parts=(d.q||[]).slice(0,600).map(q=>q.slice(0,7).map(Number)).filter(q=>q.length===7&&q.every(Number.isFinite)); return {id:'u_'+Math.abs(hashStr(JSON.stringify([d.n,d.a,parts.length]))).toString(36),name:String(d.n||'Item').slice(0,24),author:String(d.a||'').slice(0,20),cat,price:Math.max(0,Math.min(99999,d.p|0)),parts,created:Date.now()}; }
 function hashStr(t){ let h=0; for(let i=0;i<t.length;i++){ h=(h*31+t.charCodeAt(i))|0; } return h; }
+// Import a .bvi item file (saved from Avatar Creator) straight into the Avatar shop
+function bviToParts(blocks){ const V=0.2, rows=new Map(), r=n=>Math.round(n*1000)/1000; for(const [i,j,k,c] of blocks){ const rk=j+','+k+','+c; (rows.get(rk)||rows.set(rk,[]).get(rk)).push(i); }
+  const parts=[]; for(const [rk,is] of rows){ const [j,k,c]=rk.split(',').map(Number); is.sort((a,b)=>a-b); let s0=is[0], e=is[0]; const flush=()=>parts.push([r((e-s0+1)*V),V,V,c,r((s0+e+1)/2*V),r((j+.5)*V),r((k+.5)*V)]); for(let n=1;n<is.length;n++){ if(is[n]===e+1) e=is[n]; else { flush(); s0=e=is[n]; } } flush(); } return parts; }
+document.getElementById('bviImport').onclick=e=>{ e.preventDefault(); const i=document.createElement('input'); i.type='file'; i.accept='.bvi,.json'; i.onchange=()=>{ const f=i.files[0]; if(!f) return; f.text().then(t=>{ const d=JSON.parse(t); if(d.format!=='blockverse-item'||!Array.isArray(d.blocks)||!d.blocks.length) throw 0;
+      const blocks=d.blocks.slice(0,600).filter(b=>Array.isArray(b)&&b.length>=4&&b.every(Number.isFinite)); const parts=bviToParts(blocks); const name=String(d.name||'Item').slice(0,24), author=String(d.author||'').slice(0,20);
+      const x=customAdd({id:'u_'+Math.abs(hashStr(JSON.stringify([name,author,parts.length]))).toString(36),name,author,cat:['head','body','legs'].includes(d.cat)?d.cat:'head',price:Math.max(0,Math.min(99999,d.price|0)),parts,created:Date.now()});
+      renderCatalog(); toast('✨ Imported "'+x.name+'"','find it in Avatar → ✨ Community'); shopUploadMine().then(()=>renderCatalog());
+      document.querySelectorAll('#tabs button').forEach(b=>{ if(b.dataset.s==='avatar') b.click(); }); catFilter='community'; document.querySelectorAll('.cattabs button').forEach(b=>b.classList.toggle('on',b.dataset.c==='community')); renderCatalog(); })
+    .catch(()=>toast('Could not import','That doesn\'t look like a Blockverse item (.bvi) file')); }; i.click(); };
 setTimeout(shopRefresh,1500);
 (function customImportFromHash(){ const m=location.hash.match(/^#item=([A-Za-z0-9_-]+)/); if(!m) return; try{ const x=customDecode(m[1]); customAdd(x); history.replaceState(null,'',location.pathname+location.search); setTimeout(()=>{ renderCatalog(); toast('✨ New avatar item','"'+x.name+'" is in the Avatar shop under Community'); },500); }catch(e){ console.warn('bad item link',e); } })();
 // avatar preview (separate small renderer)
